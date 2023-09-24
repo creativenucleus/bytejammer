@@ -16,6 +16,35 @@ For Windows, Mac, and Linux.
 
 The standalone includes a TIC-80 binary, which can be written to the filesystem and run.
 
+## **IMPORTANT**
+
+This is a work in progress **USE AT YOUR OWN RISK**.
+
+## Runnning
+
+(Swap `ticjammer.exe` for `ticjammer` on Linux/Mac)
+
+### Run a Jukebox
+
+`ticjammer.exe`
+
+`ticjammer.exe jukebox --playlist .\playlist\trains.json`
+
+`ticjammer.exe jukebox --playlist .\playlist\nanogems-test-selection.zip`
+
+### Run a Server
+
+`ticjammer.exe server --port 4444`
+
+### Run a client
+
+`ticjammer.exe client --host localhost --port 4444`
+
+### Run a client-jukebox
+
+`ticjammer.exe client-jukebox --host localhost --port 4444` // optional --playlist as above
+
+
 ### Jukebox mode
 
 Default (no arguments) mode will launch into jukebox mode, playing random Bytejams from LCDZ.
@@ -68,37 +97,3 @@ Code posting to a web client via WebSocket?
 - Backups
 - Auto DJ
 
-## Example Run
-
-tic80/ should be an empty directory:
-
-### Run a Server
-
-```
-.\ticjammer.exe server --port 4444
-
-```
-
-### Run a client
-
-```
-.\ticjammer.exe client --host localhost --port 4444
-```
-
-## Architecture
-
-SenderLocal()
-
-SenderRemote(host, port)
-
-ClientPlayer(identity, sender, <- channel)
-
-ClientJukebox(playlist, sender)
-
-Receiver(<- channel)
-
-ServerLocal
-->newTic()
-
-Server
-... Wraps ServerLocal

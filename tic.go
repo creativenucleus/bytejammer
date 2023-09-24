@@ -19,14 +19,14 @@ type Tic struct {
 }
 
 func newClientTic(workDir string, slug string) (*Tic, error) {
-	return newTic(workDir, slug, true, true)
+	return newTic(workDir, slug, true, true, false)
 }
 
 func newServerTic(workDir string, slug string) (*Tic, error) {
-	return newTic(workDir, slug, true, false)
+	return newTic(workDir, slug, true, false, true)
 }
 
-func newTic(workDir string, slug string, hasImportFile bool, hasExportFile bool) (*Tic, error) {
+func newTic(workDir string, slug string, hasImportFile bool, hasExportFile bool, isServer bool) (*Tic, error) {
 	fmt.Printf("Running TIC-80 version [%s]\n", embedTic80version)
 
 	tic := Tic{}
@@ -42,13 +42,17 @@ func newTic(workDir string, slug string, hasImportFile bool, hasExportFile bool)
 
 	if hasImportFile {
 		tic.importFilename = filepath.Clean(fmt.Sprintf("%simport-%s.lua", workDir, slug))
-		args = append(args, "--delay=5")
 		args = append(args, fmt.Sprintf("--codeimport=%s", tic.importFilename))
 	}
 
 	if hasExportFile {
 		tic.exportFilename = filepath.Clean(fmt.Sprintf("%sexport-%s.lua", workDir, slug))
 		args = append(args, fmt.Sprintf("--codeexport=%s", tic.exportFilename))
+	}
+
+	if isServer {
+		args = append(args, "--delay=5")
+		args = append(args, "--scale=1")
 	}
 
 	tic.cmd = exec.Command(tic.ticFilename, args...)

@@ -1,59 +1,41 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"time"
 )
 
-const (
-	rotatePeriod = 7 * time.Second
-)
-
-type ClientJukebox struct {
-	playlist *Playlist
-	comms    *chan Msg
-}
-
-func NewClientJukebox(playlist *Playlist, comms *chan Msg) (*ClientJukebox, error) {
-	log.Printf("-> Launching Jukebox for playlist")
-
-	c := ClientJukebox{
-		comms:    comms,
-		playlist: playlist,
+func startClientJukebox(workDir string, host string, port int, playlist *Playlist) error {
+	ch := make(chan Msg)
+	j, err := NewJukebox(playlist, &ch)
+	if err != nil {
+		return err
 	}
 
-	return &c, nil
-}
+	ws, err := NewWebSocketClient(host, port)
+	if err != nil {
+		return err
+	}
+	defer ws.Close()
 
-func (c *ClientJukebox) start() {
 	go func() {
-		// Send the welcome TIC file
-		(*c.comms) <- Msg{Type: "code", Data: ticCodeAddRunSignal(luaWelcome)}
-
-		rotateTicker := time.NewTicker(rotatePeriod)
-		defer rotateTicker.Stop()
-
 		for {
 			select {
-			case <-rotateTicker.C:
-				playlistItem, err := c.playlist.getNext()
-				if err != nil {
-					log.Println("ERR get code:", err)
-					break
+			case msg, ok := <-ch:
+				if ok {
+					switch msg.Type {
+					case "code":
+						err := ws.sendCode(msg.Data)
+						if err != nil {
+							// #TODO: soften!
+							log.Fatal(err)
+						}
+					}
 				}
-
-				fmt.Printf("Playing (TIC):\nLocation: %s\n", playlistItem.location)
-				if playlistItem.author != "" {
-					fmt.Printf("Author: %s\n", playlistItem.author)
-				}
-
-				if playlistItem.description != "" {
-					fmt.Printf("Description: %s\n", playlistItem.description)
-				}
-
-				(*c.comms) <- Msg{Type: "code", Data: ticCodeAddRunSignal(playlistItem.code)}
 			}
 		}
 	}()
+
+	j.start()
+	for {
+	}
 }

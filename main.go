@@ -1,9 +1,7 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"math/rand"
 	"os"
 	"path/filepath"
 
@@ -40,7 +38,7 @@ func main() {
 						log.Fatal(err)
 					}
 
-					err = startStandaloneJukebox(workDir, playlist)
+					err = startLocalJukebox(workDir, playlist)
 					if err != nil {
 						log.Fatal(err)
 					}
@@ -49,6 +47,25 @@ func main() {
 			}, {
 				Name:  "server",
 				Usage: "Run server mode",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "port",
+						Usage:    "Port",
+						Required: true,
+					},
+				},
+				Action: func(cCtx *cli.Context) error {
+					port := cCtx.Int("port")
+					err := startServer(workDir, port)
+					if err != nil {
+						log.Fatal(err)
+					}
+
+					return nil
+				},
+			}, {
+				Name:  "client",
+				Usage: "Run client",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:     "host",
@@ -62,36 +79,10 @@ func main() {
 					},
 				},
 				Action: func(cCtx *cli.Context) error {
-					playlistFilename := cCtx.String("playlist")
-					playlist, err := readPlaylist(playlistFilename)
-					if err != nil {
-						log.Fatal(err)
-					}
+					host := cCtx.String("host")
+					port := cCtx.Int("port")
 
-					err = startStandaloneJukebox(workDir, playlist)
-					if err != nil {
-						log.Fatal(err)
-					}
-					return nil
-				},
-			}, {
-				Name:  "client",
-				Usage: "Run client",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:     "host",
-						Usage:    "Host",
-						Required: true,
-					},
-				},
-				Action: func(cCtx *cli.Context) error {
-					playlistFilename := cCtx.String("playlist")
-					playlist, err := readPlaylist(playlistFilename)
-					if err != nil {
-						log.Fatal(err)
-					}
-
-					err = startStandaloneJukebox(workDir, playlist)
+					err = startClient(workDir, host, port)
 					if err != nil {
 						log.Fatal(err)
 					}
@@ -106,15 +97,26 @@ func main() {
 						Usage:    "Host",
 						Required: true,
 					},
+					&cli.StringFlag{
+						Name:     "port",
+						Usage:    "Port",
+						Required: true,
+					},
+					&cli.StringFlag{
+						Name:  "playlist",
+						Usage: "Playlist file (empty for LCDZ playlist)",
+					},
 				},
 				Action: func(cCtx *cli.Context) error {
+					host := cCtx.String("host")
+					port := cCtx.Int("port")
 					playlistFilename := cCtx.String("playlist")
 					playlist, err := readPlaylist(playlistFilename)
 					if err != nil {
 						log.Fatal(err)
 					}
 
-					err = startStandaloneJukebox(workDir, playlist)
+					err = startClientJukebox(workDir, host, port, playlist)
 					if err != nil {
 						log.Fatal(err)
 					}
@@ -146,42 +148,4 @@ func readPlaylist(filename string) (*Playlist, error) {
 	}
 
 	return NewPlaylistFromJSON(playlistData)
-}
-
-func startStandaloneJukebox(workDir string, playlist *Playlist) error {
-	ch := make(chan Msg)
-
-	c, err := NewClientJukebox(playlist, &ch)
-	if err != nil {
-		return err
-	}
-
-	slug := fmt.Sprint(rand.Intn(10000))
-	tic, err := newServerTic(workDir, slug)
-	if err != nil {
-		return err
-	}
-	defer tic.shutdown()
-
-	go func() {
-		for {
-			select {
-			case msg, ok := <-ch:
-				if ok {
-					switch msg.Type {
-					case "code":
-						err = tic.importCode(msg.Data)
-						if err != nil {
-							// #TODO: soften!
-							log.Fatal(err)
-						}
-					}
-				}
-			}
-		}
-	}()
-
-	c.start()
-	for {
-	}
 }

@@ -15,6 +15,13 @@ jobs:
     strategy:
       matrix:
         os: [ 'windows', 'linux', 'darwin' ]
+        include:
+          - os: windows
+            exename: ticjammer.exe
+          - os: linux
+            exename: ticjammer
+          - os: darwin
+            exename: ticjammer
     runs-on: ubuntu-latest
     steps:
       # Check-out this repository under $GITHUB_WORKSPACE
@@ -26,11 +33,12 @@ jobs:
         with:
           go-version-file: './go.mod'
       - name: Build
-        run: GOOS=${{matrix.os}} GOARCH=amd64 go build -o ./release/ticjammer.exe
+        run: GOOS=${{matrix.os}} GOARCH=amd64 go build -o ./${{matrix.exename}}
       - name: Upload
         uses: actions/upload-artifact@v3
         with:
           name: ticjammer-${{matrix.os}}
           path: |
             ./README.md
-            ./release/ticjammer.exe
+            ./playlist/
+            ./${{matrix.exename}}
