@@ -26,11 +26,11 @@ jobs:
         with:
           go-version-file: './go.mod'
       - name: Build
-        run: GOOS=${{matrix.os}} GOARCH=amd64 go build -o ./release/bytejammer.exe
+        run: GOOS=${{matrix.os}} GOARCH=amd64 go build -o ./release/ticjammer.exe
       - name: Upload
         uses: actions/upload-artifact@v3
         with:
-          name: bytejammer-${{matrix.os}}
+          name: ticjammer-${{matrix.os}}
           path: |
             ./README.md
-            ./release/bytejammer.exe
+            ./release/ticjammer.exe
