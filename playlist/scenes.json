@@ -1,0 +1,38 @@
+{
+	"title": "Scenes and Dioramas Playlist",
+    "items": [{
+		"location": "https://livecode.demozoo.org/shader_file_sources/2022_11_05_byte_jam_inercia/inerciabytejam_gasman.lua"
+	},{
+		"location": "https://livecode.demozoo.org/shader_file_sources/2022_12_19_byte_jam_fieldfx_casual/tobach.lua"
+	},{
+		"location": "https://livecode.demozoo.org/shader_file_sources/2023_09_04_byte_jam_monday_night_bytes/nico.lua"
+	},{
+		"location": "https://livecode.demozoo.org/shader_file_sources/2023_05_01_byte_jam_monday_night_bytes/jtruk.lua"
+	},{
+		"location": "https://livecode.demozoo.org/shader_file_sources/2022_05_02_byte_jam_fieldfx/bytejam_fieldfx_gasman.lua"
+	},{
+		"location": "https://livecode.demozoo.org/shader_file_sources/2022_12_12_byte_jam_fieldfx_casual/tobach.lua"
+	},{
+		"location": "https://livecode.demozoo.org/shader_file_sources/2022_02_11_byte_jam_lovebyte/gasman_voyager.lua"
+	},{
+		"location": "https://livecode.demozoo.org/shader_file_sources/2022_11_05_byte_jam_inercia/inerciabytejam_tobach.lua"
+	},{
+		"location": "https://livecode.demozoo.org/shader_file_sources/2022_12_19_byte_jam_fieldfx_casual/kiikrindar.lua"
+	},{
+		"location": "https://livecode.demozoo.org/shader_file_sources/2023_05_01_byte_jam_monday_night_bytes/ToBach.lua"
+	},{
+		"location": "https://livecode.demozoo.org/shader_file_sources/2023_01_14_byte_jam_lovebyte_get_ready/tobach.lua"
+	},{
+		"location": "https://livecode.demozoo.org/shader_file_sources/2023_04_17_byte_jam_monday_night_bytes/ToBach.lua"
+	},{
+		"location": "https://livecode.demozoo.org/shader_file_sources/2022_02_11_byte_jam_lovebyte/borb_frogparty.lua"
+	},{
+		"location": "https://livecode.demozoo.org/shader_file_sources/2021_09_26_byte_jam_lovebyte_duck/nusan.lua"
+	},{
+		"location": "https://livecode.demozoo.org/shader_file_sources/2023_09_18_byte_jam_monday_night_bytes/suule.lua"
+	},{
+			"location": "https://livecode.demozoo.org/shader_file_sources/2023_08_28_byte_jam_monday_night_bytes/2023_08_28_jtruk.lua"
+	},{
+		"location": "https://livecode.demozoo.org/shader_file_sources/2022_12_05_byte_jam_fieldfx_casual/tobach.lua"
+	}]
+}

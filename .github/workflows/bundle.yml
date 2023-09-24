@@ -1,0 +1,36 @@
+# GitHub Action to build Go
+# jtruk / RiFT
+# First version: 2023-09-11
+
+name: Build Releases
+
+# Trigger workflow when we push to main, or manually start it
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  release:
+    strategy:
+      matrix:
+        os: [ 'windows', 'linux', 'darwin' ]
+    runs-on: ubuntu-latest
+    steps:
+      # Check-out this repository under $GITHUB_WORKSPACE
+      - name: Check out code
+        uses: actions/checkout@v3
+      
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: './go.mod'
+      - name: Build
+        run: GOOS=${{matrix.os}} GOARCH=amd64 go build -o ./release/bytejammer.exe
+      - name: Upload
+        uses: actions/upload-artifact@v3
+        with:
+          name: bytejammer-${{matrix.os}}
+          path: |
+            ./README.md
+            ./release/bytejammer.exe

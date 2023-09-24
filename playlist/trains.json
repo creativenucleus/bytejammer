@@ -1,0 +1,20 @@
+{
+    "title": "Trains Playlist",
+    "items": [{
+        "location": "https://livecode.demozoo.org/shader_file_sources/2022_11_21_byte_jam_fieldfx_casual/superogue.lua",
+        "author": "Superogue",
+        "description": "From Field-FX 2022-11-21 (casual)"
+    },{
+        "location": "https://livecode.demozoo.org/shader_file_sources/2023_09_08_byte_jam_nordlicht/gasman.lua",
+        "author": "Gasman",
+        "description": "From Field-FX Byte Jam 2023-09-08"
+    }, {
+        "location": "https://livecode.demozoo.org/shader_file_sources/2023_09_04_byte_jam_monday_night_bytes/aldroid.lua",
+        "author": "Aldroid",
+        "description": "From Field-FX Byte Jam 2023-09-04"
+    }, {
+        "location": "https://livecode.demozoo.org/shader_file_sources/2022_12_05_byte_jam_fieldfx_casual/tobach.lua",
+        "author": "ToBach",
+        "description": "From Field-FX 2022-12-05 (casual)"
+    }]
+}
