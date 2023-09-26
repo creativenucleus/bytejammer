@@ -4,14 +4,14 @@ import (
 	_ "embed"
 )
 
-//go:embed build/embed/operator.html
+//go:embed build/embed/web/operator.html
 var operatorHtml []byte
 
-//go:embed build/embed/index.html
+//go:embed build/embed/web/index.html
 var indexHtml []byte
 
-//go:embed build/embed/welcome.lua
+//go:embed build/embed/tic-code/welcome.lua
 var luaWelcome []byte
 
-//go:embed build/embed/client.lua
+//go:embed build/embed/tic-code/client.lua
 var luaClient []byte

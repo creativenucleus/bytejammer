@@ -31,14 +31,15 @@ const (
 	pingPeriod = (pongWait * 9) / 10
 )
 
-type ClientConnForServer struct {
-	conn *websocket.Conn
-	id   int
+type JamClient struct {
+	conn        *websocket.Conn
+	id          int
+	displayName string
 }
 
 type Server struct {
 	//	server   *http.Server
-	clients []*ClientConnForServer
+	clients []*JamClient
 }
 
 func startServer(workDir string, port int) error {
@@ -57,7 +58,7 @@ func startServer(workDir string, port int) error {
 	fmt.Printf("In a web browser, go to http://localhost:%d/operator\n", port)
 
 	s := Server{
-		clients: []*ClientConnForServer{},
+		clients: []*JamClient{},
 	}
 
 	http.HandleFunc("/", webIndex)
@@ -155,9 +156,13 @@ func wsBytejam(s *Server, workDir string) func(http.ResponseWriter, *http.Reques
 		defer tic.shutdown()
 
 		// #TODO: Write lock this...
-		s.clients = append(s.clients, &ClientConnForServer{conn: conn, id: len(s.clients)})
+		client := JamClient{
+			conn: conn,
+			id:   len(s.clients),
+		}
+		s.clients = append(s.clients, &client)
 
-		go runServerWsClientRead(conn, tic)
+		go client.runServerWsClientRead(tic)
 		//		go runServerWsClientWrite(conn, tic)
 
 		// #TODO: handle exit
@@ -166,10 +171,10 @@ func wsBytejam(s *Server, workDir string) func(http.ResponseWriter, *http.Reques
 	}
 }
 
-func runServerWsClientRead(conn *websocket.Conn, tic *Tic) {
+func (jc *JamClient) runServerWsClientRead(tic *Tic) {
 	for {
 		var msg Msg
-		err := conn.ReadJSON(&msg)
+		err := jc.conn.ReadJSON(&msg)
 		if err != nil {
 			log.Println("read:", err)
 			break
@@ -183,7 +188,8 @@ func runServerWsClientRead(conn *websocket.Conn, tic *Tic) {
 				break
 			}
 		case "identity":
-			fmt.Printf("IDENTITY: %s\n", msg.Data)
+			jc.displayName = string(msg.Data)
+			fmt.Println(jc.displayName)
 
 		default:
 			log.Printf("Message not understood: %s\n", msg.Type)
@@ -221,12 +227,16 @@ func (s *Server) resetAllClients() {
 }
 
 // TODO: Handle error
-func (c *ClientConnForServer) resetClient() {
-	fmt.Printf("CLIENT RESET: %d\n", c.id)
-	replacements := map[string]string{"CLIENT": fmt.Sprintf("%d", c.id)}
+func (jc *JamClient) resetClient() {
+	fmt.Printf("CLIENT RESET: %d\n", jc.id)
+	replacements := map[string]string{
+		"CLIENT_ID":    fmt.Sprintf("%d", jc.id),
+		"DISPLAY_NAME": jc.displayName,
+	}
+
 	code := ticCodeAddRunSignal(ticCodeReplace(luaClient, replacements))
 	msg := Msg{Type: "code", Data: code}
-	err := c.conn.WriteJSON(msg)
+	err := jc.conn.WriteJSON(msg)
 	if err != nil {
 		log.Println("ERR write:", err)
 	}

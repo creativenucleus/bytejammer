@@ -8,8 +8,6 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// "./playlist/nanogems-test-selection.zip"
-
 func main() {
 	workDir := "./work/"
 
@@ -86,6 +84,10 @@ func main() {
 				Usage: "Run client",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
+						Name:  "identity",
+						Usage: "Identity",
+					},
+					&cli.StringFlag{
 						Name:     "host",
 						Usage:    "Host",
 						Required: true,
@@ -99,10 +101,10 @@ func main() {
 				Action: func(cCtx *cli.Context) error {
 					host := cCtx.String("host")
 					port := cCtx.Int("port")
+					identityString := cCtx.String("identity")
 
-					identity, err := getIdentity(workDir)
+					identity, err := getIdentity(workDir, identityString)
 					if err != nil {
-						log.Println("Unable to read identity. Make sure you've run this program with the make-identity subcommand first")
 						log.Fatal(err)
 					}
 

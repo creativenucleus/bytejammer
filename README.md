@@ -38,6 +38,12 @@ This is a work in progress **USE AT YOUR OWN RISK**.
 
 ### Run a client
 
+You must first create an identity:
+
+`ticjammer.exe make-identity`
+
+Then you can run this each time:
+
 `ticjammer.exe client --host localhost --port 4444`
 
 ### Run a client-jukebox
