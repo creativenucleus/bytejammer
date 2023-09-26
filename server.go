@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
@@ -11,7 +10,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-const statusSendPeriod = 10 * time.Second
+const statusSendPeriod = 5 * time.Second
 
 var (
 	wsUpgrader = websocket.Upgrader{
@@ -198,22 +197,28 @@ func (jc *JamClient) runServerWsClientRead(tic *Tic) {
 }
 
 type MsgStatus struct {
-	ClientCount int `json:"client-count"`
+	Type string `json:"type"`
+	Data struct {
+		Clients []struct {
+			DisplayName string
+		}
+	} `json:"data"`
 }
 
 func (s *Server) sendStatus(c *websocket.Conn) {
-	data, err := json.Marshal(MsgStatus{len(s.clients)})
-	if err != nil {
-		log.Println("ERR marshal:", err)
-		return
-	}
-
-	msg := Msg{
+	msg := MsgStatus{
 		Type: "status",
-		Data: data,
 	}
 
-	err = c.WriteJSON(&msg)
+	for _, jc := range s.clients {
+		msg.Data.Clients = append(msg.Data.Clients, struct {
+			DisplayName string
+		}{
+			DisplayName: jc.displayName,
+		})
+	}
+
+	err := c.WriteJSON(&msg)
 	if err != nil {
 		log.Println("read:", err)
 	}
