@@ -2,10 +2,12 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 )
 
@@ -105,10 +107,31 @@ func ticCodeAddRunSignal(code []byte) []byte {
 	return append([]byte("-- pos: 0,0\n"), code...)
 }
 
+func ticCodeReplace(code []byte, replacements map[string]string) []byte {
+	args := make([]string, 0)
+	for k, v := range replacements {
+		key := fmt.Sprintf("--[[$%s]]--", k)
+		args = append(args, key)
+		args = append(args, v)
+	}
+
+	replacer := strings.NewReplacer(args...)
+
+	return []byte(replacer.Replace(string(code)))
+}
+
 func (t *Tic) importCode(code []byte) error {
+	if t.importFilename == "" {
+		log.Fatal("Tried to import code - but file is not set up")
+	}
+
 	return os.WriteFile(t.importFilename, code, 0644)
 }
 
 func (t *Tic) exportCode() ([]byte, error) {
+	if t.exportFilename == "" {
+		log.Fatal("Tried to export code - but file is not set up")
+	}
+
 	return os.ReadFile(t.exportFilename)
 }

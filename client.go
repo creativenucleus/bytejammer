@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"log"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -26,11 +28,40 @@ func startClient(workDir string, host string, port int) error {
 	}
 	defer tic.shutdown()
 
+	go clientWsReader(ws, tic)
+	go clientWsWriter(ws, tic)
+
+	// Lock #TODO: use a channel to escape
+	for {
+	}
+}
+
+func clientWsReader(ws *SenderWebSocket, tic *Tic) error {
+	for {
+		var msg Msg
+		err := ws.conn.ReadJSON(&msg)
+		if err != nil {
+			log.Fatal(err)
+			/*
+				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+					log.Printf("error: %v", err)
+				}
+				break
+			*/
+		}
+
+		tic.importCode(msg.Data)
+	}
+}
+
+// #TODO: fatalErr
+func clientWsWriter(ws *SenderWebSocket, tic *Tic) {
 	fileCheckTicker := time.NewTicker(fileCheckPeriod)
 	defer func() {
 		fileCheckTicker.Stop()
 	}()
 
+	lastUpdate := []byte{}
 	for {
 		select {
 		//		case <-done:
@@ -38,13 +69,22 @@ func startClient(workDir string, host string, port int) error {
 		case <-fileCheckTicker.C:
 			data, err := readFile(tic.exportFilename)
 			if err != nil {
-				return err
+				log.Fatal(err)
+				break
+			}
+
+			if bytes.Equal(lastUpdate, data) {
+				// Don't send if no change
+				break
 			}
 
 			err = ws.sendCode(data)
 			if err != nil {
-				return err
+				log.Fatal(err)
+				break
 			}
+
+			lastUpdate = data
 			/*
 				case <-interrupt:
 					log.Println("interrupt")

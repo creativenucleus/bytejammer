@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
@@ -9,6 +10,8 @@ import (
 
 	"github.com/gorilla/websocket"
 )
+
+const statusSendPeriod = 10 * time.Second
 
 var (
 	wsUpgrader = websocket.Upgrader{
@@ -28,42 +31,46 @@ const (
 	pingPeriod = (pongWait * 9) / 10
 )
 
+type ClientConnForServer struct {
+	conn *websocket.Conn
+	id   int
+}
+
 type Server struct {
-	port     int
-	filename string
-	server   *http.Server
+	//	server   *http.Server
+	clients []*ClientConnForServer
 }
 
 func startServer(workDir string, port int) error {
-	s := &http.Server{
+	webServer := &http.Server{
 		Addr:              fmt.Sprintf(":%d", port),
 		ReadHeaderTimeout: 3 * time.Second,
 	}
 
-	/*
-		fs := http.FileServer(http.Dir("./web-static"))
-		http.Handle("/static/", http.StripPrefix("/static/", fs))
+	fs := http.FileServer(http.Dir("./web-static"))
+	http.Handle("/static/", http.StripPrefix("/static/", fs))
 
-		http.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
-			http.ServeFile(w, r, "/web-static/favicon/favicon.ico")
-		})
+	http.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "/web-static/favicon/favicon.ico")
+	})
 
-		fmt.Printf("In a web browser, go to http://localhost:%d/server\n", port)
+	fmt.Printf("In a web browser, go to http://localhost:%d/operator\n", port)
 
-		http.HandleFunc("/", webIndex)
-			http.HandleFunc("/server", webServer)
-			http.HandleFunc("/server-ws", wsServer)
-	*/
+	s := Server{
+		clients: []*ClientConnForServer{},
+	}
 
-	http.HandleFunc("/ws-bytejam", wsBytejam(workDir))
-	if err := s.ListenAndServe(); err != nil {
+	http.HandleFunc("/", webIndex)
+	http.HandleFunc("/operator", webOperator)
+	http.HandleFunc("/ws-operator", wsOperator(&s))
+	http.HandleFunc("/ws-bytejam", wsBytejam(&s, workDir))
+	if err := webServer.ListenAndServe(); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-/*
 func webIndex(w http.ResponseWriter, r *http.Request) {
 	_, err := w.Write(indexHtml)
 	if err != nil {
@@ -71,21 +78,32 @@ func webIndex(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func webServer(w http.ResponseWriter, r *http.Request) {
-	_, err := w.Write(serverHtml)
+func webOperator(w http.ResponseWriter, r *http.Request) {
+	_, err := w.Write(operatorHtml)
 	if err != nil {
 		log.Println("write:", err)
 	}
 }
 
-func wsServer(w http.ResponseWriter, r *http.Request) {
-	c, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Print("upgrade:", err)
-		return
-	}
-	defer c.Close()
+func wsOperator(s *Server) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c, err := wsUpgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Print("upgrade:", err)
+			return
+		}
+		defer c.Close()
 
+		go wsOperatorRead(s, c)
+		go wsOperatorWrite(s, c)
+
+		// #TODO: handle exit
+		for {
+		}
+	}
+}
+
+func wsOperatorRead(s *Server, c *websocket.Conn) {
 	for {
 		var msg Msg
 		err := c.ReadJSON(&msg)
@@ -95,20 +113,31 @@ func wsServer(w http.ResponseWriter, r *http.Request) {
 		}
 
 		switch msg.Type {
+		case "reset-clients":
+			s.resetAllClients()
 		default:
 			log.Printf("Message not understood: %s\n", msg.Type)
 		}
+	}
+}
 
-		msg = Msg{Type: "ping", Data: []byte("piooong")}
-		err = c.WriteJSON(msg)
-		if err != nil {
-			log.Println("write:", err)
+func wsOperatorWrite(s *Server, c *websocket.Conn) {
+	statusTicker := time.NewTicker(statusSendPeriod)
+	defer func() {
+		statusTicker.Stop()
+	}()
+
+	for {
+		select {
+		//		case <-done:
+		//			return
+		case <-statusTicker.C:
+			s.sendStatus(c)
 		}
 	}
 }
-*/
 
-func wsBytejam(workDir string) func(w http.ResponseWriter, r *http.Request) {
+func wsBytejam(s *Server, workDir string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		conn, err := wsUpgrader.Upgrade(w, r, nil)
 		if err != nil {
@@ -125,28 +154,75 @@ func wsBytejam(workDir string) func(w http.ResponseWriter, r *http.Request) {
 		}
 		defer tic.shutdown()
 
+		// #TODO: Write lock this...
+		s.clients = append(s.clients, &ClientConnForServer{conn: conn, id: len(s.clients)})
+
+		go runServerWsClientRead(conn, tic)
+		//		go runServerWsClientWrite(conn, tic)
+
+		// #TODO: handle exit
 		for {
-			var msg Msg
-			err := conn.ReadJSON(&msg)
+		}
+	}
+}
+
+func runServerWsClientRead(conn *websocket.Conn, tic *Tic) {
+	for {
+		var msg Msg
+		err := conn.ReadJSON(&msg)
+		if err != nil {
+			log.Println("read:", err)
+			break
+		}
+
+		switch msg.Type {
+		case "code":
+			err = tic.importCode(msg.Data)
 			if err != nil {
-				log.Println("read:", err)
+				log.Println("ERR read:", err)
 				break
 			}
-
-			switch msg.Type {
-			case "code":
-				err = tic.importCode(msg.Data)
-				if err != nil {
-					log.Println("ERR read:", err)
-					break
-				}
-			}
-
-			msg = Msg{Type: "ping", Data: []byte("piooong")}
-			err = conn.WriteJSON(msg)
-			if err != nil {
-				log.Println("ERR write:", err)
-			}
 		}
+	}
+}
+
+type MsgStatus struct {
+	ClientCount int `json:"client-count"`
+}
+
+func (s *Server) sendStatus(c *websocket.Conn) {
+	data, err := json.Marshal(MsgStatus{len(s.clients)})
+	if err != nil {
+		log.Println("ERR marshal:", err)
+		return
+	}
+
+	msg := Msg{
+		Type: "status",
+		Data: data,
+	}
+
+	err = c.WriteJSON(&msg)
+	if err != nil {
+		log.Println("read:", err)
+	}
+}
+
+func (s *Server) resetAllClients() {
+	fmt.Printf("CLIENTS RESET: %d\n", len(s.clients))
+	for _, c := range s.clients {
+		c.resetClient()
+	}
+}
+
+// TODO: Handle error
+func (c *ClientConnForServer) resetClient() {
+	fmt.Printf("CLIENT RESET: %d\n", c.id)
+	replacements := map[string]string{"CLIENT": fmt.Sprintf("%d", c.id)}
+	code := ticCodeAddRunSignal(ticCodeReplace(luaClient, replacements))
+	msg := Msg{Type: "code", Data: code}
+	err := c.conn.WriteJSON(msg)
+	if err != nil {
+		log.Println("ERR write:", err)
 	}
 }
