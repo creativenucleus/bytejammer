@@ -40,6 +40,11 @@ func (s *SenderWebSocket) sendCode(code []byte) error {
 	return s.conn.WriteJSON(&msg)
 }
 
+func (s *SenderWebSocket) sendIdentity(identity *Identity) error {
+	msg := Msg{Type: "identity", Data: []byte(identity.DisplayName)}
+	return s.conn.WriteJSON(&msg)
+}
+
 func (s *SenderWebSocket) Close() {
 	s.conn.Close()
 }

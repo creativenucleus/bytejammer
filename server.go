@@ -182,6 +182,11 @@ func runServerWsClientRead(conn *websocket.Conn, tic *Tic) {
 				log.Println("ERR read:", err)
 				break
 			}
+		case "identity":
+			fmt.Printf("IDENTITY: %s\n", msg.Data)
+
+		default:
+			log.Printf("Message not understood: %s\n", msg.Type)
 		}
 	}
 }

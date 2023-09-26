@@ -14,7 +14,7 @@ const (
 	fileCheckPeriod = 3 * time.Second
 )
 
-func startClient(workDir string, host string, port int) error {
+func startClient(workDir string, host string, port int, identity *Identity) error {
 	ws, err := NewWebSocketClient(host, port)
 	if err != nil {
 		return err
@@ -29,7 +29,7 @@ func startClient(workDir string, host string, port int) error {
 	defer tic.shutdown()
 
 	go clientWsReader(ws, tic)
-	go clientWsWriter(ws, tic)
+	go clientWsWriter(ws, tic, identity)
 
 	// Lock #TODO: use a channel to escape
 	for {
@@ -55,7 +55,12 @@ func clientWsReader(ws *SenderWebSocket, tic *Tic) error {
 }
 
 // #TODO: fatalErr
-func clientWsWriter(ws *SenderWebSocket, tic *Tic) {
+func clientWsWriter(ws *SenderWebSocket, tic *Tic, identity *Identity) {
+	err := ws.sendIdentity(identity)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	fileCheckTicker := time.NewTicker(fileCheckPeriod)
 	defer func() {
 		fileCheckTicker.Stop()

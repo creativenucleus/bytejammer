@@ -7,6 +7,8 @@ import (
 )
 
 func startLocalJukebox(workDir string, playlist *Playlist) error {
+	fmt.Printf("Starting local jukebox containing %d items\n", len(playlist.items))
+
 	ch := make(chan Msg)
 
 	j, err := NewJukebox(playlist, &ch)

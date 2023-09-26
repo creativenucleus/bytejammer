@@ -23,7 +23,25 @@ func main() {
 		DefaultCommand: "jukebox",
 		Commands: []*cli.Command{
 			{
-				Name:  "jukebox",
+				Name:  "make-identity",
+				Usage: "Create an identity for joining a server",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "name",
+						Usage:    "Name to display",
+						Required: true,
+					},
+				},
+				Action: func(cCtx *cli.Context) error {
+					name := cCtx.String("name")
+					err := makeIdentity(workDir, name)
+					if err != nil {
+						log.Fatal(err)
+					}
+
+					return nil
+				},
+			}, {Name: "jukebox",
 				Usage: "Run jukebox mode",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
@@ -82,7 +100,13 @@ func main() {
 					host := cCtx.String("host")
 					port := cCtx.Int("port")
 
-					err = startClient(workDir, host, port)
+					identity, err := getIdentity(workDir)
+					if err != nil {
+						log.Println("Unable to read identity. Make sure you've run this program with the make-identity subcommand first")
+						log.Fatal(err)
+					}
+
+					err = startClient(workDir, host, port, identity)
 					if err != nil {
 						log.Fatal(err)
 					}

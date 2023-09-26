@@ -43,19 +43,29 @@ func NewPlaylistFromZip(zipFilename string) (*Playlist, error) {
 		}
 	}
 
+	var playlist *Playlist
 	indexData, ok := files[`index.json`]
 	if !ok {
-		return nil, errors.New("No index.json found")
-	}
+		fmt.Println("No index.json found, so adding zipfile contents without metadata")
 
-	playlist, err := NewPlaylistFromJSON(indexData)
-	for key, item := range playlist.items {
-		codeData, ok := files[item.location]
-		if !ok {
-			return nil, errors.New(fmt.Sprintf("File not found (%s)", item.location))
+		playlist = NewPlaylist()
+		for location, codeData := range files {
+			playlist.items = append(playlist.items, PlaylistItem{location: location, code: codeData})
+		}
+	} else {
+		playlist, err = NewPlaylistFromJSON(indexData)
+		if err != nil {
+			return nil, err
 		}
 
-		playlist.items[key].code = codeData
+		for key, item := range playlist.items {
+			codeData, ok := files[item.location]
+			if !ok {
+				return nil, errors.New(fmt.Sprintf("File not found (%s)", item.location))
+			}
+
+			playlist.items[key].code = codeData
+		}
 	}
 
 	return playlist, nil
