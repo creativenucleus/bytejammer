@@ -4,9 +4,7 @@ import (
 	_ "embed"
 )
 
-// #TODO: FIX!
-//
-//go:embed build/embed/tic80-win.exe
+//go:embed build/embed/tic80-linux.exe
 var embedTic80exe []byte
 
 //go:embed build/embed/tic80-version.txt
