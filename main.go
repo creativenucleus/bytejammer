@@ -120,13 +120,14 @@ func main() {
 				Action: func(cCtx *cli.Context) error {
 					host := cCtx.String("host")
 					port := cCtx.Int("port")
-					identityString := cCtx.String("identity")
-
-					identity, err := getIdentity(workDir, identityString)
-					if err != nil {
-						log.Fatal(err)
-					}
-
+					//identityString := cCtx.String("identity")
+					/*
+						identity, err := getIdentity(workDir, identityString)
+						if err != nil {
+							log.Fatal(err)
+						}
+					*/
+					identity := &Identity{}
 					err = startClient(workDir, host, port, identity)
 					if err != nil {
 						log.Fatal(err)

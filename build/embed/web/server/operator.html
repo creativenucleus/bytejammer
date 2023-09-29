@@ -8,7 +8,7 @@
                     div.innerHTML = `<p><b>Connection to server: ${text}</b></p>`;
                 }
 
-            window.onload = function () {
+            window.onload = () => {
                 var conn;
                 var msg = document.getElementById("msg");
                 var log = document.getElementById("log");
@@ -59,7 +59,7 @@
                 };
 
                 if (window["WebSocket"]) {
-                    conn = new WebSocket("ws://" + document.location.host + "/ws-operator");
+                    conn = new WebSocket("ws://" + document.location.host + "/{{session_key}}/ws-operator");
                     
                     conn.onopen = function() {
                         setWsStatusText("Open")

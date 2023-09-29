@@ -30,6 +30,30 @@ func makeIdentity(workDir string, displayName string) error {
 	return os.WriteFile(filepath, data, 0644)
 }
 
+func getIdentities(workDir string) (map[string]Identity, error) {
+	identities := make(map[string]Identity, 0)
+
+	filematches, err := filepath.Glob(workDir + "identity-*.json")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, filematch := range filematches {
+		identity, err := readIdentityFile(filematch)
+		if err != nil {
+			return nil, err
+		}
+
+		// #TODO: This is a bit hacky
+		strlen := len(filematch)
+		key := filematch[strlen-41 : strlen-5]
+		fmt.Println(key)
+		identities[key] = *identity
+	}
+
+	return identities, nil
+}
+
 // uuid can be ""
 func getIdentity(workDir string, uuid string) (*Identity, error) {
 	identityFilePath := ""
@@ -52,7 +76,16 @@ func getIdentity(workDir string, uuid string) (*Identity, error) {
 		identityFilePath = filepath.Clean(fmt.Sprintf("%sidentity-%s.json", workDir, uuid))
 	}
 
-	data, err := os.ReadFile(identityFilePath)
+	identity, err := readIdentityFile(identityFilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	return identity, nil
+}
+
+func readIdentityFile(filepath string) (*Identity, error) {
+	data, err := os.ReadFile(filepath)
 	if err != nil {
 		return nil, err
 	}

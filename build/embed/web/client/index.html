@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Ticjammer</title>
+
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="description" content="">
+        <meta name="author" content="jtruk/RiFT">
+
+        <link href="/static/package/bootstrap-5.3.2-dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+        <link rel="stylesheet" href="/static/style/default.css" />
+        <link rel="icon" href="/static/favicon/favicon.ico">
+
+        <script>
+            let IDENTITIES = {};
+
+            const refreshViewIdentities = () => {
+                const elSelect = document.getElementById("identity-id");
+                while (elSelect.firstChild) {
+                    elSelect.removeChild(elSelect.firstChild);
+                }
+
+                for (const [key, identity] of Object.entries(IDENTITIES)) {
+                    const elOption = document.createElement("option");
+                    elOption.value = key;
+                    elOption.text = identity.displayName;
+
+                    elSelect.appendChild(elOption);
+                }
+            }
+
+            // #TODO: catch errors
+            const makeReq = async(method, endpoint, data) => {
+                // Making our request
+                const response = await fetch(`/{{session_key}}/api/${endpoint}.json`, {
+                    method: method,
+//                    mode: "cors", // no-cors, *cors, same-origin
+                    cache: "no-cache", // *default, no-cache, reload, force-cache, only-if-cached
+//                    credentials: "same-origin", // include, *same-origin, omit
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+//                    redirect: "follow", // manual, *follow, error
+//                    referrerPolicy: "no-referrer", // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
+                    body: JSON.stringify(data), // body data type must match "Content-Type" header
+                });
+                return await response.json();
+            }
+
+            const fetchIdentites = async () => {
+                // #TODO: catch errors
+                IDENTITIES = await makeReq("GET", "identity");
+                refreshViewIdentities();
+            }
+
+            const getDataFromForm = (elForm) => {
+                return Object.fromEntries(new FormData(elForm))
+            }
+
+            window.onload = () => {
+                fetchIdentites();
+
+                document.getElementById("create-identity").addEventListener("submit", (e) => {
+                    e.preventDefault();
+                    const data = getDataFromForm(e.target)
+                    e.target.reset();
+                    (async() => {
+                        const res = await makeReq("POST", "identity", data)
+
+                        fetchIdentites();
+                    })();
+                });
+
+                document.getElementById("join-server").addEventListener("submit", (e) => {
+                    e.preventDefault();
+                    const data = getDataFromForm(e.target)
+                    e.target.reset();
+                    (async() => {
+                        const res = await makeReq("POST", "join-server", data)
+
+                        fetchIdentites();
+                    })();
+                });
+            };
+        </script>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Ticjammer!</h1>
+
+            <h2>Create an Identity</h2>
+
+            <form id="create-identity">
+                <div class="row g-3 align-items-center">
+                    <div class="col-auto">
+                        <label for="displayName" class="col-form-label">Display Name</label>
+                    </div>
+                    <div class="col-auto">
+                        <input type="text" id="displayName" name="displayName" class="form-control" aria-describedby="displayNameHelp">
+                    </div>
+                    <div class="col-auto">
+                        <span id="displayNameHelp" class="form-text">
+                            Must be 8-20 characters long.
+                        </span>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Create</button>
+            </form>
+
+            <h2>Join a Server</h2>
+
+            <form id="join-server">
+                <div class="row g-3 align-items-center">
+                    <div class="col-auto">
+                        <label for="host" class="form-label">Host</label>
+                    </div>
+                    <div class="col-auto">
+                        <input type="text" class="form-control" id="host" name="host" aria-describedby="host">
+                    </div>
+                    <div class="col-auto">
+                        <span id="displayNameHelp" class="form-text">
+                            Must be 8-20 characters long.
+                        </span>
+                    </div>
+                </div>
+                <div class="row g-3 align-items-center">
+                    <div class="col-auto">
+                        <label for="port" class="form-label">Port</label>
+                    </div>
+                    <div class="col-auto">
+                        <input type="number" class="form-control" id="port" name="port" aria-describedby="port">
+                    </div>
+                    <div class="col-auto">
+                        <span id="displayNameHelp" class="form-text">
+                            Must be 8-20 characters long.
+                        </span>
+                    </div>
+                </div>
+                <div class="row g-3 align-items-center">
+                    <div class="col-auto">
+                        <label for="identity-id" class="col-form-label">Identity</label>
+                    </div>
+                    <div class="col-auto">
+                        <select class="form-select" aria-label="Default select example" id="identity-id" name="identity-id">
+                        </select>
+                    </div>
+                </div>
+                <div class="row g-3 align-items-center">
+                    <div class="col-auto">
+                        <label for="message" class="form-label">Message</label>
+                    </div>
+                    <div class="col-auto">
+                        <textarea class="form-control" id="port" name="message" aria-describedby="message"></textarea>
+                    </div>
+                    <div class="col-auto">
+                        <span id="displayNameHelp" class="form-text">
+                            Must be 8-20 characters long.
+                        </span>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Join</button>
+            </form>
+        </div>
+    </body>
+
+    <script src="/static/package/bootstrap-5.3.2-dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>    
+</html>

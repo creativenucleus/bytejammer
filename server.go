@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/tyler-sommer/stick"
 )
 
 const statusSendPeriod = 5 * time.Second
@@ -42,6 +43,9 @@ type Server struct {
 }
 
 func startServer(workDir string, port int, broadcaster *NusanLauncher) error {
+	// Replace this with a random string...
+	session := "session"
+
 	webServer := &http.Server{
 		Addr:              fmt.Sprintf(":%d", port),
 		ReadHeaderTimeout: 3 * time.Second,
@@ -54,15 +58,15 @@ func startServer(workDir string, port int, broadcaster *NusanLauncher) error {
 		http.ServeFile(w, r, "/web-static/favicon/favicon.ico")
 	})
 
-	fmt.Printf("In a web browser, go to http://localhost:%d/operator\n", port)
+	fmt.Printf("In a web browser, go to http://localhost:%d/%s/operator\n", port, session)
 
 	s := Server{
 		clients: []*JamClient{},
 	}
 
 	http.HandleFunc("/", webIndex)
-	http.HandleFunc("/operator", webOperator)
-	http.HandleFunc("/ws-operator", wsOperator(&s))
+	http.HandleFunc(fmt.Sprintf("/%s/operator", session), webOperator)
+	http.HandleFunc(fmt.Sprintf("/%s/ws-operator", session), wsOperator(&s))
 	http.HandleFunc("/ws-bytejam", wsBytejam(&s, workDir, broadcaster))
 	if err := webServer.ListenAndServe(); err != nil {
 		return err
@@ -72,14 +76,16 @@ func startServer(workDir string, port int, broadcaster *NusanLauncher) error {
 }
 
 func webIndex(w http.ResponseWriter, r *http.Request) {
-	_, err := w.Write(indexHtml)
+	_, err := w.Write(serverIndexHtml)
 	if err != nil {
 		log.Println("write:", err)
 	}
 }
 
 func webOperator(w http.ResponseWriter, r *http.Request) {
-	_, err := w.Write(operatorHtml)
+	env := stick.New(nil)
+
+	err := env.Execute(string(serverOperatorHtml), w, map[string]stick.Value{"session_key": "session"})
 	if err != nil {
 		log.Println("write:", err)
 	}
