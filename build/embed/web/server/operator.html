@@ -1,11 +1,21 @@
-<!DOCTYPE html>
-    <html lang="en">
-        <head>
-            <title>Ticjammer</title>
-            <script type="text/javascript">
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Ticjammer</title>
+
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="description" content="">
+        <meta name="author" content="jtruk/RiFT">
+
+        <link href="/static/package/bootstrap-5.3.2-dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+        <link rel="stylesheet" href="/static/style/default.css" />
+        <link rel="icon" href="/static/favicon/favicon.ico">
+
+        <script type="text/javascript">
                 const setWsStatusText = (text) => {
                     const div = document.getElementById("ws-status")
-                    div.innerHTML = `<p><b>Connection to server: ${text}</b></p>`;
+                    div.innerHTML = `<p><b>Local connection: ${text}</b></p>`;
                 }
 
             window.onload = () => {
@@ -101,10 +111,19 @@
         <link rel="stylesheet" href="/static/style/default.css" />
     </head>
     <body>
-        <h1>Ticjammer</h1>
-        <div id="ws-status">(unknown)</div>
+        <div class="container">
+            <h1>Ticjammer</h1>
 
-        <div id="clients"></div>
-        <button id="btn-clients">Send IDENTIFIER CODE to Clients</button>
+            <div id="clients"></div>
+            <button id="btn-clients">Send IDENTIFIER CODE to Clients</button>
+
+            <script src="/static/package/bootstrap-5.3.2-dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>    
+        </div>
+    
+        <div class="fixed-bottom">
+            <div class="container">
+                <div id="ws-status">(unknown)</div>
+            </div>
+        </div>
     </body>
 </html>

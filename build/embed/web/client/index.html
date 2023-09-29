@@ -15,6 +15,16 @@
         <script>
             let IDENTITIES = {};
 
+            const setWsStatusText = (text) => {
+                const div = document.getElementById("ws-status")
+                div.innerHTML = `<p><b>Connection to local: ${text}</b></p>`;
+            }
+
+            const setServerStatusText = (text) => {
+                const div = document.getElementById("server-status")
+                div.innerHTML = `<p><b>Connection to remote server: ${text}</b></p>`;
+            }
+
             const refreshViewIdentities = () => {
                 const elSelect = document.getElementById("identity-id");
                 while (elSelect.firstChild) {
@@ -82,6 +92,48 @@
                         fetchIdentites();
                     })();
                 });
+
+                const handleMsgServerStatus = (data) => {
+                    setServerStatusText(data.IsConnected);
+                }
+
+                if (window["WebSocket"]) {
+                    conn = new WebSocket("ws://" + document.location.host + "/{{session_key}}/ws-client");
+                    
+                    conn.onopen = function() {
+                        setWsStatusText("Open")
+                        wsSendMsg("hello!", "boo");
+                    }
+                    
+                    conn.onclose = function (evt) {
+                        setWsStatusText("closed")
+                    };
+
+                    conn.onmessage = function (evt) {
+                        const msg = JSON.parse(evt.data);
+                        switch(msg.type) {
+                            case "server-status":
+                                handleMsgServerStatus(msg.data)
+                                break;
+                            default:
+                                console.error(`Unhandled message type ${msg.type}`);
+                        }
+                
+
+/*
+                        var messages = evt.data.split('\n');
+                        for (var i = 0; i < messages.length; i++) {
+                            var item = document.createElement("div");
+                            item.innerText = messages[i];
+                            appendLog(item);
+                        }
+                        */
+                    };
+                } else {
+                    var item = document.createElement("div");
+                    item.innerHTML = "<b>Your browser does not support WebSockets.</b>";
+                    appendLog(item);
+                }
             };
         </script>
     </head>
@@ -161,6 +213,12 @@
                 </div>
                 <button type="submit" class="btn btn-primary">Join</button>
             </form>
+
+            <div class="fixed-bottom">
+                <div class="container">
+                    <div id="ws-status"></div>
+                </div>
+            </div>
         </div>
     </body>
 

@@ -29,7 +29,12 @@ func NewJukebox(playlist *Playlist, comms *chan Msg) (*Jukebox, error) {
 func (j *Jukebox) start() {
 	go func() {
 		// Send the welcome TIC file
-		(*j.comms) <- Msg{Type: "code", Data: ticCodeAddRunSignal(luaWelcome)}
+		code := ticCodeReplace(luaJukebox, map[string]string{
+			"PLAYLIST_ITEM_COUNT": fmt.Sprintf("%d", len(j.playlist.items)),
+			"RELEASE_TITLE":       RELEASE_TITLE,
+		})
+
+		(*j.comms) <- Msg{Type: "code", Code: ticCodeAddRunSignal(code)}
 
 		rotateTicker := time.NewTicker(rotatePeriod)
 		defer rotateTicker.Stop()
@@ -58,7 +63,7 @@ func (j *Jukebox) start() {
 				}
 
 				code = ticCodeAddRunSignal(code)
-				(*j.comms) <- Msg{Type: "code", Data: code}
+				(*j.comms) <- Msg{Type: "code", Code: code}
 			}
 		}
 	}()

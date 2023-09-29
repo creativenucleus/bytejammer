@@ -1,4 +1,5 @@
 SIN,ABS=math.sin,math.abs
+PLAYLIST_ITEM_COUNT=--[[$PLAYLIST_ITEM_COUNT]]--
 
 T=0
 Y_TITLE=0
@@ -35,24 +36,27 @@ function TIC()
 		x=x+print(title:sub(i,i),x,y,i,false,3)
 	end
   
-    print("- Jukebox Mode -",74,50,15)
+	centrePrint("(--[[RELEASE_TITLE]]-- edition)",50,15)
+	centrePrint("Jukebox Mode: " .. PLAYLIST_ITEM_COUNT .. " items",60,15)
   
     local texts={
  	    "Thanks",
-        "",
 		"TIC/Battle version: Nesbox, rho, Superogue",
 		"Prior art: Aldroid, Gasman",
 		"LCDZ: Totetmatt, PSEnough",
 		"Additional help: Mantratronic, Violet Procyon",
+		"Nusan, and the Field-FX community",
     }
  
     for t=1,#texts do
-        local text=texts[t]
-        w=print(text,240,0,0)
-        local x=120-w/2
         local y=65+t*9
-        local c=1+(15-t)%15
-        print(text,x,y,c)
+        local c=1+(14-t)%15
+		centrePrint(texts[t],y,c)
     end
     T=T+1
+end
+
+function centrePrint(text,y,c)
+	w=print(text,240,0,0)
+	print(text,120-w/2,y,c)
 end

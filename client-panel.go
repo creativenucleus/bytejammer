@@ -15,6 +15,8 @@ import (
 
 type ClientPanel struct {
 	workDir string
+	// #TODO: lock down to receiver only
+	chSendServerStatus chan ClientServerStatus
 }
 
 func startClientPanel(workDir string, port int) error {
@@ -36,12 +38,13 @@ func startClientPanel(workDir string, port int) error {
 	fmt.Printf("In a web browser, go to http://localhost:%d/%s\n", port, session)
 
 	cp := ClientPanel{
-		workDir: workDir,
+		workDir:            workDir,
+		chSendServerStatus: make(chan ClientServerStatus),
 	}
 	http.HandleFunc(fmt.Sprintf("/%s", session), cp.webClientIndex)
 	http.HandleFunc(fmt.Sprintf("/%s/api/identity.json", session), cp.webClientApiIdentityJSON)
 	http.HandleFunc(fmt.Sprintf("/%s/api/join-server.json", session), cp.webClientApiJoinServerJSON)
-	http.HandleFunc(fmt.Sprintf("/%s/ws-client", session), wsClient(&cp))
+	http.HandleFunc(fmt.Sprintf("/%s/ws-client", session), cp.wsClient())
 	if err := webServer.ListenAndServe(); err != nil {
 		return err
 	}
@@ -98,6 +101,8 @@ func (cp *ClientPanel) webClientApiIdentityJSON(w http.ResponseWriter, r *http.R
 func (cp *ClientPanel) webClientApiJoinServerJSON(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "POST":
+		cp.chSendServerStatus <- ClientServerStatus{isConnected: false}
+
 		// #TODO: Cleaner way to do this?
 		type reqType struct {
 			Host       string `json:"host"`
@@ -126,7 +131,7 @@ func (cp *ClientPanel) webClientApiJoinServerJSON(w http.ResponseWriter, r *http
 			return
 		}
 
-		err = startClientServerConn(cp.workDir, req.Host, port, identity)
+		err = startClientServerConn(cp.workDir, req.Host, port, identity, cp.chSendServerStatus)
 		if err != nil {
 			apiOutErr(w, err, http.StatusInternalServerError)
 			return
@@ -138,7 +143,7 @@ func (cp *ClientPanel) webClientApiJoinServerJSON(w http.ResponseWriter, r *http
 	}
 }
 
-func wsClient(cp *ClientPanel) func(http.ResponseWriter, *http.Request) {
+func (cp *ClientPanel) wsClient() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c, err := wsUpgrader.Upgrade(w, r, nil)
 		if err != nil {
@@ -157,6 +162,7 @@ func wsClient(cp *ClientPanel) func(http.ResponseWriter, *http.Request) {
 }
 
 func (cp *ClientPanel) wsRead(c *websocket.Conn) {
+	fmt.Println("CLIENT READER STARTED")
 	for {
 		var msg Msg
 		err := c.ReadJSON(&msg)
@@ -175,17 +181,27 @@ func (cp *ClientPanel) wsRead(c *websocket.Conn) {
 }
 
 func (cp *ClientPanel) wsWrite(c *websocket.Conn) {
-	statusTicker := time.NewTicker(statusSendPeriod)
-	defer func() {
-		statusTicker.Stop()
-	}()
-
+	/*
+		statusTicker := time.NewTicker(statusSendPeriod)
+		defer func() {
+			statusTicker.Stop()
+		}()
+	*/
+	fmt.Println("CLIENT WRITER STARTED")
 	for {
 		select {
 		//		case <-done:
 		//			return
-		case <-statusTicker.C:
-			//			s.sendStatus(c)
+		//		case <-statusTicker.C:
+		//			fmt.Println("TICKER!")
+
+		case status := <-cp.chSendServerStatus:
+			msg := Msg{Type: "server-status", ServerStatus: status}
+			err := c.WriteJSON(&msg)
+			if err != nil {
+				// #TODO: relax
+				log.Fatal(err)
+			}
 		}
 	}
 }

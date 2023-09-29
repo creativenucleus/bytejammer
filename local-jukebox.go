@@ -30,7 +30,7 @@ func startLocalJukebox(workDir string, playlist *Playlist) error {
 				if ok {
 					switch msg.Type {
 					case "code":
-						err = tic.importCode(msg.Data)
+						err = tic.importCode(msg.Code)
 						if err != nil {
 							// #TODO: soften!
 							log.Fatal(err)

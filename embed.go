@@ -13,8 +13,8 @@ var serverIndexHtml []byte
 //go:embed build/embed/web/client/index.html
 var clientIndexHtml []byte
 
-//go:embed build/embed/tic-code/welcome.lua
-var luaWelcome []byte
+//go:embed build/embed/tic-code/jukebox.lua
+var luaJukebox []byte
 
 //go:embed build/embed/tic-code/client.lua
 var luaClient []byte

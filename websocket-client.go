@@ -36,12 +36,12 @@ func NewWebSocketClient(host string, port int) (*SenderWebSocket, error) {
 
 func (s *SenderWebSocket) sendCode(code []byte) error {
 	// #TODO: line endings for data? UTF-8?
-	msg := Msg{Type: "code", Data: code}
+	msg := Msg{Type: "code", Code: code}
 	return s.conn.WriteJSON(&msg)
 }
 
 func (s *SenderWebSocket) sendIdentity(identity *Identity) error {
-	msg := Msg{Type: "identity", Data: []byte(identity.DisplayName)}
+	msg := Msg{Type: "identity", Code: []byte(identity.DisplayName)}
 	return s.conn.WriteJSON(&msg)
 }
 

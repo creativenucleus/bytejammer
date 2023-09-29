@@ -2,11 +2,16 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 
 	"github.com/urfave/cli/v2"
+)
+
+const (
+	RELEASE_TITLE = "Appealing Apricot"
 )
 
 func main() {
@@ -17,6 +22,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	fmt.Printf("==================\n")
+	fmt.Printf("Starting TicJammer\n")
+	fmt.Printf("(%s edition)\n", RELEASE_TITLE)
+	fmt.Printf("==================\n")
 
 	app := &cli.App{
 		DefaultCommand: "jukebox",

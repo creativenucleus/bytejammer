@@ -47,7 +47,6 @@ func getIdentities(workDir string) (map[string]Identity, error) {
 		// #TODO: This is a bit hacky
 		strlen := len(filematch)
 		key := filematch[strlen-41 : strlen-5]
-		fmt.Println(key)
 		identities[key] = *identity
 	}
 

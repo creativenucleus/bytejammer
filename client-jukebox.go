@@ -1,8 +1,6 @@
 package main
 
-import (
-	"log"
-)
+import "log"
 
 func startClientJukebox(workDir string, host string, port int, playlist *Playlist) error {
 	ch := make(chan Msg)
@@ -24,7 +22,7 @@ func startClientJukebox(workDir string, host string, port int, playlist *Playlis
 				if ok {
 					switch msg.Type {
 					case "code":
-						err := ws.sendCode(msg.Data)
+						err := ws.sendCode(msg.Code)
 						if err != nil {
 							// #TODO: soften!
 							log.Fatal(err)

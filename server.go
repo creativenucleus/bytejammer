@@ -197,13 +197,18 @@ func (jc *JamClient) runServerWsClientRead(tic *Tic) {
 
 		switch msg.Type {
 		case "code":
-			err = tic.importCode(msg.Data)
+			code := msg.Code
+			if jc.displayName != "" {
+				code = ticCodeAddAuthor(code, jc.displayName)
+			}
+
+			err = tic.importCode(code)
 			if err != nil {
 				log.Println("ERR read:", err)
 				break
 			}
 		case "identity":
-			jc.displayName = string(msg.Data)
+			jc.displayName = string(msg.Code)
 			fmt.Println(jc.displayName)
 
 		default:
@@ -256,7 +261,7 @@ func (jc *JamClient) resetClient() {
 	}
 
 	code := ticCodeAddRunSignal(ticCodeReplace(luaClient, replacements))
-	msg := Msg{Type: "code", Data: code}
+	msg := Msg{Type: "code", Code: code}
 	err := jc.conn.WriteJSON(msg)
 	if err != nil {
 		log.Println("ERR write:", err)

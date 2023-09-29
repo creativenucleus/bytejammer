@@ -10,13 +10,24 @@ import (
 	"time"
 )
 
-func startClientServerConn(workDir string, host string, port int, identity *Identity) error {
-	var ws *SenderWebSocket
+type ClientWS struct {
+	ws *SenderWebSocket
+}
+
+type ClientServerStatus struct {
+	isConnected bool
+}
+
+func startClientServerConn(workDir string, host string, port int, identity *Identity, chServerStatus chan ClientServerStatus) error {
+	chServerStatus <- ClientServerStatus{isConnected: false}
+	cws := ClientWS{}
+	// Keep running until we make a connection
 	for {
 		// #TODO: This is not the right construction
 		var err error
-		ws, err = clientOpenConnection(host, port)
+		cws.ws, err = clientOpenConnection(host, port)
 		if err != nil {
+			//chServerStatus <- false
 			log.Println(err)
 			time.Sleep(5 * time.Second)
 			continue
@@ -24,7 +35,8 @@ func startClientServerConn(workDir string, host string, port int, identity *Iden
 
 		break
 	}
-	defer ws.Close()
+	defer cws.ws.Close()
+	chServerStatus <- ClientServerStatus{isConnected: true}
 
 	slug := fmt.Sprint(rand.Intn(10000))
 	tic, err := newClientTic(workDir, slug)
@@ -33,8 +45,8 @@ func startClientServerConn(workDir string, host string, port int, identity *Iden
 	}
 	defer tic.shutdown()
 
-	go clientWsReader(ws, tic)
-	go clientWsWriter(ws, tic, identity)
+	go cws.clientWsReader(tic)
+	go cws.clientWsWriter(tic, identity)
 
 	// Lock #TODO: use a channel to escape
 	for {
@@ -50,10 +62,10 @@ func clientOpenConnection(host string, port int) (*SenderWebSocket, error) {
 	return ws, nil
 }
 
-func clientWsReader(ws *SenderWebSocket, tic *Tic) error {
+func (cws *ClientWS) clientWsReader(tic *Tic) error {
 	for {
 		var msg Msg
-		err := ws.conn.ReadJSON(&msg)
+		err := cws.ws.conn.ReadJSON(&msg)
 		if err != nil {
 			log.Fatal(err)
 			/*
@@ -64,13 +76,16 @@ func clientWsReader(ws *SenderWebSocket, tic *Tic) error {
 			*/
 		}
 
-		tic.importCode(msg.Data)
+		switch msg.Type {
+		case "code":
+			tic.importCode(msg.Code)
+		}
 	}
 }
 
 // #TODO: fatalErr
-func clientWsWriter(ws *SenderWebSocket, tic *Tic, identity *Identity) {
-	err := ws.sendIdentity(identity)
+func (cws *ClientWS) clientWsWriter(tic *Tic, identity *Identity) {
+	err := cws.ws.sendIdentity(identity)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -86,6 +101,7 @@ func clientWsWriter(ws *SenderWebSocket, tic *Tic, identity *Identity) {
 		//		case <-done:
 		//			return
 		case <-fileCheckTicker.C:
+			// Sends a the local file to the server periodically...
 			data, err := readFile(tic.exportFullpath)
 			if err != nil {
 				log.Fatal(err)
@@ -97,7 +113,7 @@ func clientWsWriter(ws *SenderWebSocket, tic *Tic, identity *Identity) {
 				break
 			}
 
-			err = ws.sendCode(data)
+			err = cws.ws.sendCode(data)
 			if err != nil {
 				log.Fatal(err)
 				break
