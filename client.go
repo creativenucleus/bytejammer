@@ -72,7 +72,7 @@ func clientWsWriter(ws *SenderWebSocket, tic *Tic, identity *Identity) {
 		//		case <-done:
 		//			return
 		case <-fileCheckTicker.C:
-			data, err := readFile(tic.exportFilename)
+			data, err := readFile(tic.exportFullpath)
 			if err != nil {
 				log.Fatal(err)
 				break

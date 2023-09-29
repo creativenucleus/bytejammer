@@ -41,7 +41,7 @@ type Server struct {
 	clients []*JamClient
 }
 
-func startServer(workDir string, port int) error {
+func startServer(workDir string, port int, broadcaster *NusanLauncher) error {
 	webServer := &http.Server{
 		Addr:              fmt.Sprintf(":%d", port),
 		ReadHeaderTimeout: 3 * time.Second,
@@ -63,7 +63,7 @@ func startServer(workDir string, port int) error {
 	http.HandleFunc("/", webIndex)
 	http.HandleFunc("/operator", webOperator)
 	http.HandleFunc("/ws-operator", wsOperator(&s))
-	http.HandleFunc("/ws-bytejam", wsBytejam(&s, workDir))
+	http.HandleFunc("/ws-bytejam", wsBytejam(&s, workDir, broadcaster))
 	if err := webServer.ListenAndServe(); err != nil {
 		return err
 	}
@@ -137,7 +137,7 @@ func wsOperatorWrite(s *Server, c *websocket.Conn) {
 	}
 }
 
-func wsBytejam(s *Server, workDir string) func(http.ResponseWriter, *http.Request) {
+func wsBytejam(s *Server, workDir string, broadcaster *NusanLauncher) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		conn, err := wsUpgrader.Upgrade(w, r, nil)
 		if err != nil {
@@ -147,10 +147,20 @@ func wsBytejam(s *Server, workDir string) func(http.ResponseWriter, *http.Reques
 		defer conn.Close()
 
 		slug := fmt.Sprint(rand.Intn(10000))
-		tic, err := newServerTic(workDir, slug)
-		if err != nil {
-			log.Print("ERR new TIC:", err)
-			return
+
+		var tic *Tic
+		if broadcaster != nil {
+			tic, err = newNusanServerTic(workDir, slug, broadcaster)
+			if err != nil {
+				log.Print("ERR new TIC:", err)
+				return
+			}
+		} else {
+			tic, err = newServerTic(workDir, slug)
+			if err != nil {
+				log.Print("ERR new TIC:", err)
+				return
+			}
 		}
 		defer tic.shutdown()
 

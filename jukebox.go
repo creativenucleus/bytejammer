@@ -52,7 +52,13 @@ func (j *Jukebox) start() {
 					fmt.Printf("Description: %s\n", playlistItem.description)
 				}
 
-				(*j.comms) <- Msg{Type: "code", Data: ticCodeAddRunSignal(playlistItem.code)}
+				code := playlistItem.code
+				if playlistItem.author != "" {
+					code = ticCodeAddAuthor(code, playlistItem.author)
+				}
+
+				code = ticCodeAddRunSignal(code)
+				(*j.comms) <- Msg{Type: "code", Data: code}
 			}
 		}
 	}()

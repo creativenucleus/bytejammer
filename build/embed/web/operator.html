@@ -31,9 +31,16 @@
                         html = "<div>No clients connected</div>";
                     } else {
                         html += "<table>";
+                        html += `<tr>`;
+                        html += `<th>Name</th>`;
+                        html += `<th>From</th>`;
+                        html += `<th>To</th>`;
+                        html += `</tr>`;
                         for (const client of data.Clients) {
                             html += `<tr>`;
                             html += `<td>${client.DisplayName}</td>`;
+                            html += `<td><input type="radio" /></td>`;
+                            html += `<td><input type="checkbox" /></td>`;
                             html += `</tr>`;
                         }
                         html += "</table>";

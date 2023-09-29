@@ -15,3 +15,6 @@ var luaWelcome []byte
 
 //go:embed build/embed/tic-code/client.lua
 var luaClient []byte
+
+//go:embed build/embed/tic-code/author-shim.lua
+var luaAuthorShim []byte

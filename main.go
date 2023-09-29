@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"os"
 	"path/filepath"
@@ -69,10 +70,28 @@ func main() {
 						Usage:    "Port",
 						Required: true,
 					},
+					&cli.StringFlag{
+						Name:  "broadcast",
+						Usage: "Broadcast (valid: nusan)",
+					},
 				},
 				Action: func(cCtx *cli.Context) error {
 					port := cCtx.Int("port")
-					err := startServer(workDir, port)
+					broadcast := cCtx.String("broadcast")
+
+					var broadcaster *NusanLauncher
+					if broadcast != "" {
+						if broadcast == "nusan" {
+							broadcaster, err = NusanLauncherConnect(4455)
+							if err != nil {
+								log.Fatal(err)
+							}
+						} else {
+							log.Fatal(errors.New("Unhandled broadcast type"))
+						}
+					}
+
+					err := startServer(workDir, port, broadcaster)
 					if err != nil {
 						log.Fatal(err)
 					}
