@@ -26,7 +26,7 @@ func NusanLauncherConnect(port int) (*NusanLauncher, error) {
 	nl := NusanLauncher{
 		ch: &ch,
 	}
-	http.HandleFunc("/ticjammer", wsNusan(nl))
+	http.HandleFunc("/bytejammer", wsNusan(nl))
 
 	// #TODO: This is a bit iffy - nl may be available before the connection can be used
 	go func() {
@@ -87,7 +87,7 @@ func (nl *NusanLauncher) nusanWsOperatorWrite() {
 		case msg := <-(*nl.ch):
 			fmt.Printf("-> NUSAN TOSEND: %v\n", msg)
 			nlMsg := NusanLauncherMsg{}
-			nlMsg.Data.RoomName = "ticjammer"
+			nlMsg.Data.RoomName = "bytejammer"
 			nlMsg.Data.NickName = msg
 			err := nl.conn.WriteJSON(&nlMsg)
 			if err != nil {

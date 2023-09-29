@@ -1,4 +1,4 @@
-module github.com/creativenucleus/ticjammer
+module github.com/creativenucleus/bytejammer
 
 go 1.21.1
 

@@ -24,7 +24,7 @@ func main() {
 	}
 
 	fmt.Printf("==================\n")
-	fmt.Printf("Starting TicJammer\n")
+	fmt.Printf("Starting Bytejammer\n")
 	fmt.Printf("(%s edition)\n", RELEASE_TITLE)
 	fmt.Printf("==================\n")
 

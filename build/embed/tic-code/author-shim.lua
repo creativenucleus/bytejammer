@@ -25,7 +25,7 @@
 
 
 
--- ADDED BY TICJAMMER --
+-- ADDED BY BYTEJAMMER --
 __OLDOVR=OVR
 OVR=function()
     if __OLDOVR then __OLDOVR() end

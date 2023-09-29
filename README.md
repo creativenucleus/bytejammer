@@ -1,4 +1,4 @@
-# Ticjammer
+# Bytejammer
 
 An attempt to replicate the [Bytejam launcher](https://github.com/glastonbridge/bytejams), in a single executable, to use WebSockets.
 
@@ -22,33 +22,33 @@ This is a work in progress **USE AT YOUR OWN RISK**.
 
 ## Runnning
 
-(Swap `ticjammer.exe` for `ticjammer` on Linux/Mac)
+(Swap `bytejammer.exe` for `bytejammer` on Linux/Mac)
 
 ### Run a Jukebox
 
-`ticjammer.exe`
+`bytejammer.exe`
 
-`ticjammer.exe jukebox --playlist .\playlist\trains.json`
+`bytejammer.exe jukebox --playlist .\playlist\trains.json`
 
-`ticjammer.exe jukebox --playlist .\playlist\nanogems-test-selection.zip`
+`bytejammer.exe jukebox --playlist .\playlist\nanogems-test-selection.zip`
 
 ### Run a Server
 
-`ticjammer.exe server --port 4444`
+`bytejammer.exe server --port 4444`
 
 ### Run a client
 
 You must first create an identity:
 
-`ticjammer.exe make-identity`
+`bytejammer.exe make-identity`
 
 Then you can run this each time:
 
-`ticjammer.exe client --host localhost --port 4444`
+`bytejammer.exe client --host localhost --port 4444`
 
 ### Run a client-jukebox
 
-`ticjammer.exe client-jukebox --host localhost --port 4444` // optional --playlist as above
+`bytejammer.exe client-jukebox --host localhost --port 4444` // optional --playlist as above
 
 
 ### Jukebox mode

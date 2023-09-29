@@ -29,7 +29,7 @@ function TIC()
 	cls(0)
 
 	Y_TITLE=10+SIN(T*.1)*4
-	local title="TICJAMMER"
+	local title="BYTEJAMMER"
 	local x=37
 	for i=1,#title do
 		local y=Y_TITLE+15-ABS(SIN(i*.4+T*.1))*10

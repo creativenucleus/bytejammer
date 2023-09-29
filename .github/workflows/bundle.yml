@@ -17,11 +17,11 @@ jobs:
         os: [ 'windows', 'linux', 'darwin' ]
         include:
           - os: windows
-            exename: ticjammer.exe
+            exename: bytejammer.exe
           - os: linux
-            exename: ticjammer
+            exename: bytejammer
           - os: darwin
-            exename: ticjammer
+            exename: bytejammer
     runs-on: ubuntu-latest
     steps:
       # Check-out this repository under $GITHUB_WORKSPACE
@@ -37,7 +37,7 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v3
         with:
-          name: ticjammer-${{matrix.os}}
+          name: bytejammer-${{matrix.os}}
           path: |
             ./README.md
             ./playlist/
