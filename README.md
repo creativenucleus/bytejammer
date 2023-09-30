@@ -38,13 +38,13 @@ This is a work in progress **USE AT YOUR OWN RISK**.
 
 ### Run a client
 
-You must first create an identity:
+`bytejammer.exe --port 1000`
 
-`bytejammer.exe make-identity`
+Open the panel detailed in the CLI log.
 
-Then you can run this each time:
+You must first create an identity.
 
-`bytejammer.exe client --host localhost --port 4444`
+Then you can connect to a server.
 
 ### Run a client-jukebox
 

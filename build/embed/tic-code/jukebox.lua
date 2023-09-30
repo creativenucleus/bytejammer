@@ -36,7 +36,7 @@ function TIC()
 		x=x+print(title:sub(i,i),x,y,i,false,3)
 	end
   
-	centrePrint("(--[[RELEASE_TITLE]]-- edition)",50,15)
+	centrePrint("(--[[$RELEASE_TITLE]]-- edition)",50,15)
 	centrePrint("Jukebox Mode: " .. PLAYLIST_ITEM_COUNT .. " items",60,15)
   
     local texts={
@@ -45,7 +45,7 @@ function TIC()
 		"Prior art: Aldroid, Gasman",
 		"LCDZ: Totetmatt, PSEnough",
 		"Additional help: Mantratronic, Violet Procyon",
-		"Nusan, and the Field-FX community",
+		"NuSan, and the Field-FX community",
     }
  
     for t=1,#texts do

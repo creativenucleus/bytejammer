@@ -141,78 +141,90 @@
         <div class="container">
             <h1>Bytejammer!</h1>
 
-            <h2>Create an Identity</h2>
+            <div class="card mt-4 mb-4">
+                <div class="card-header">
+                    <h2>Create an Identity</h2>
+                </div>
+                <div class="card-body">
+                    <form id="create-identity">
+                        <div class="row g-3 align-items-center">
+                            <div class="col-auto">
+                                <label for="displayName" class="col-form-label">Display Name</label>
+                            </div>
+                            <div class="col-auto">
+                                <input type="text" id="displayName" name="displayName" class="form-control" aria-describedby="displayNameHelp">
+                            </div>
+                            <div class="col-auto">
+                                <span id="displayNameHelp" class="form-text">
+                                    This will be shown on the jam
+                                </span>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Create</button>
+                    </form>
+                </div>
+            </div>
 
-            <form id="create-identity">
-                <div class="row g-3 align-items-center">
-                    <div class="col-auto">
-                        <label for="displayName" class="col-form-label">Display Name</label>
-                    </div>
-                    <div class="col-auto">
-                        <input type="text" id="displayName" name="displayName" class="form-control" aria-describedby="displayNameHelp">
-                    </div>
-                    <div class="col-auto">
-                        <span id="displayNameHelp" class="form-text">
-                            Must be 8-20 characters long.
-                        </span>
-                    </div>
+            <div class="card mt-4 mb-4">
+                <div class="card-header">
+                    <h2>Join a Server</h2>
                 </div>
-                <button type="submit" class="btn btn-primary">Create</button>
-            </form>
-
-            <h2>Join a Server</h2>
-
-            <form id="join-server">
-                <div class="row g-3 align-items-center">
-                    <div class="col-auto">
-                        <label for="host" class="form-label">Host</label>
-                    </div>
-                    <div class="col-auto">
-                        <input type="text" class="form-control" id="host" name="host" aria-describedby="host">
-                    </div>
-                    <div class="col-auto">
-                        <span id="displayNameHelp" class="form-text">
-                            Must be 8-20 characters long.
-                        </span>
-                    </div>
+                <div class="card-body">
+                    <form id="join-server">
+                        <div class="row g-3 align-items-center">
+                            <div class="col-auto">
+                                <label for="host" class="form-label">Host</label>
+                            </div>
+                            <div class="col-auto">
+                                <input type="text" class="form-control" id="host" name="host" aria-describedby="host">
+                            </div>
+                            <div class="col-auto">
+                                <span id="displayNameHelp" class="form-text">
+                                    
+                                </span>
+                            </div>
+                        </div>
+                        <div class="row g-3 align-items-center">
+                            <div class="col-auto">
+                                <label for="port" class="form-label">Port</label>
+                            </div>
+                            <div class="col-auto">
+                                <input type="number" class="form-control" id="port" name="port" aria-describedby="port">
+                            </div>
+                            <div class="col-auto">
+                                <span id="displayNameHelp" class="form-text">
+                                    
+                                </span>
+                            </div>
+                        </div>
+                        <div class="row g-3 align-items-center">
+                            <div class="col-auto">
+                                <label for="identity-id" class="col-form-label">Identity</label>
+                            </div>
+                            <div class="col-auto">
+                                <select class="form-select" aria-label="Default select example" id="identity-id" name="identity-id">
+                                </select>
+                            </div>
+                        </div>
+                        <!--
+                        <div class="row g-3 align-items-center">
+                            <div class="col-auto">
+                                <label for="message" class="form-label">Message</label>
+                            </div>
+                            <div class="col-auto">
+                                <textarea class="form-control" id="port" name="message" aria-describedby="message"></textarea>
+                            </div>
+                            <div class="col-auto">
+                                <span id="displayNameHelp" class="form-text">
+                                    
+                                </span>
+                            </div>
+                        </div>
+                        -->
+                        <button type="submit" class="btn btn-primary">Join</button>
+                    </form>
                 </div>
-                <div class="row g-3 align-items-center">
-                    <div class="col-auto">
-                        <label for="port" class="form-label">Port</label>
-                    </div>
-                    <div class="col-auto">
-                        <input type="number" class="form-control" id="port" name="port" aria-describedby="port">
-                    </div>
-                    <div class="col-auto">
-                        <span id="displayNameHelp" class="form-text">
-                            Must be 8-20 characters long.
-                        </span>
-                    </div>
-                </div>
-                <div class="row g-3 align-items-center">
-                    <div class="col-auto">
-                        <label for="identity-id" class="col-form-label">Identity</label>
-                    </div>
-                    <div class="col-auto">
-                        <select class="form-select" aria-label="Default select example" id="identity-id" name="identity-id">
-                        </select>
-                    </div>
-                </div>
-                <div class="row g-3 align-items-center">
-                    <div class="col-auto">
-                        <label for="message" class="form-label">Message</label>
-                    </div>
-                    <div class="col-auto">
-                        <textarea class="form-control" id="port" name="message" aria-describedby="message"></textarea>
-                    </div>
-                    <div class="col-auto">
-                        <span id="displayNameHelp" class="form-text">
-                            Must be 8-20 characters long.
-                        </span>
-                    </div>
-                </div>
-                <button type="submit" class="btn btn-primary">Join</button>
-            </form>
+            </div>
 
             <div class="fixed-bottom">
                 <div class="container">

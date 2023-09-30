@@ -40,23 +40,29 @@
                     if(data.Clients.length == 0) {
                         html = "<div>No clients connected</div>";
                     } else {
-                        html += "<table>";
+                        html += "<table class=\"table\">";
+                        html += `<thead>`;
                         html += `<tr>`;
                         html += `<th>Name</th>`;
                         html += `<th>From</th>`;
                         html += `<th>To</th>`;
+                        html += `<th></th>`;
                         html += `</tr>`;
+                        html += `</thead>`;
+                        html += `<tbody>`;
                         for (const client of data.Clients) {
                             html += `<tr>`;
                             html += `<td>${client.DisplayName}</td>`;
                             html += `<td><input type="radio" /></td>`;
                             html += `<td><input type="checkbox" /></td>`;
+                            html += `<td><button class="btn btn-primary">Disconnect</button></td>`;
                             html += `</tr>`;
                         }
+                        html += `</tbody>`;
                         html += "</table>";
                     }
 
-                    html = `<h2>Connected Clients</h2><div>${html}</div>`;
+                    html = `<div>${html}</div>`;
                     document.getElementById("clients").innerHTML = html;
                 }
 
@@ -73,7 +79,7 @@
                     
                     conn.onopen = function() {
                         setWsStatusText("Open")
-                        wsSendMsg("hello!", "operator");
+//                        wsSendMsg("hello!", "operator");
                     }
                     
                     conn.onclose = function (evt) {
@@ -114,10 +120,15 @@
         <div class="container">
             <h1>Bytejammer</h1>
 
-            <div id="clients"></div>
-            <button id="btn-clients">Send IDENTIFIER CODE to Clients</button>
-
-            <script src="/static/package/bootstrap-5.3.2-dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>    
+            <div class="card mt-4 mb-4">
+                <div class="card-header">
+                    <h2>Connected Clients</h2>
+                </div>
+                <div class="card-body">
+                    <div id="clients"></div>
+                    <button id="btn-clients" class="btn btn-primary">Send IDENTIFIER CODE to Clients</button>
+                </div>
+            </div>
         </div>
     
         <div class="fixed-bottom">
@@ -125,5 +136,6 @@
                 <div id="ws-status">(unknown)</div>
             </div>
         </div>
+        <script src="/static/package/bootstrap-5.3.2-dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>    
     </body>
 </html>
