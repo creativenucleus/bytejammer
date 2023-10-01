@@ -2,7 +2,7 @@
 <html lang="en">
     <head>
         <meta charset="utf-8">
-        <title>Bytejammer</title>
+        <title>ByteJammer</title>
 
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="description" content="">
@@ -10,20 +10,14 @@
 
         <link href="/static/package/bootstrap-5.3.2-dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
         <link rel="stylesheet" href="/static/style/default.css" />
-        <link rel="icon" href="/static/favicon/favicon.ico">
+        <link rel="icon" href="/static/media/favicon/favicon.ico">
+        <script src="/static/javascript/bytejammer.js"></script>    
 
         <script>
+            const ws = new BjmrWebSocket('{{session_key}}')
+            const ajax = new BjmrAjax('{{session_key}}')
+
             let IDENTITIES = {};
-
-            const setWsStatusText = (text) => {
-                const div = document.getElementById("ws-status")
-                div.innerHTML = `<p><b>Connection to local: ${text}</b></p>`;
-            }
-
-            const setServerStatusText = (text) => {
-                const div = document.getElementById("server-status")
-                div.innerHTML = `<p><b>Connection to remote server: ${text}</b></p>`;
-            }
 
             const refreshViewIdentities = () => {
                 const elSelect = document.getElementById("identity-id");
@@ -40,32 +34,10 @@
                 }
             }
 
-            // #TODO: catch errors
-            const makeReq = async(method, endpoint, data) => {
-                // Making our request
-                const response = await fetch(`/{{session_key}}/api/${endpoint}.json`, {
-                    method: method,
-//                    mode: "cors", // no-cors, *cors, same-origin
-                    cache: "no-cache", // *default, no-cache, reload, force-cache, only-if-cached
-//                    credentials: "same-origin", // include, *same-origin, omit
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-//                    redirect: "follow", // manual, *follow, error
-//                    referrerPolicy: "no-referrer", // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
-                    body: JSON.stringify(data), // body data type must match "Content-Type" header
-                });
-                return await response.json();
-            }
-
             const fetchIdentites = async () => {
                 // #TODO: catch errors
-                IDENTITIES = await makeReq("GET", "identity");
+                IDENTITIES = await ajax.makeReq("GET", "identity");
                 refreshViewIdentities();
-            }
-
-            const getDataFromForm = (elForm) => {
-                return Object.fromEntries(new FormData(elForm))
             }
 
             window.onload = () => {
@@ -76,8 +48,7 @@
                     const data = getDataFromForm(e.target)
                     e.target.reset();
                     (async() => {
-                        const res = await makeReq("POST", "identity", data)
-
+                        const res = await ajax.makeReq("POST", "identity", data)
                         fetchIdentites();
                     })();
                 });
@@ -87,7 +58,7 @@
                     const data = getDataFromForm(e.target)
                     e.target.reset();
                     (async() => {
-                        const res = await makeReq("POST", "join-server", data)
+                        const res = await ajax.makeReq("POST", "join-server", data)
 
                         fetchIdentites();
                     })();
@@ -97,19 +68,33 @@
                     setServerStatusText(data.IsConnected);
                 }
 
-                if (window["WebSocket"]) {
-                    conn = new WebSocket("ws://" + document.location.host + "/{{session_key}}/ws-client");
-                    
-                    conn.onopen = function() {
-                        setWsStatusText("Open")
+                let conn = ws.open("ws://" + document.location.host + "/{{session_key}}/ws-client");
+                if(!conn) {                    
+                    setWsLocalStatusText('error', "Your browser does not support WebSockets");
+                    // TODO: Bigger error?
+                } else {                    
+                    setWsLocalStatusText('ok', "Initialised");
+
+                    conn.onerror = (error) => {
+                        alert(`[error]`);
+                    }
+
+                    conn.onopen = () => {
+                        setWsLocalStatusText('ok', "Open")
                         wsSendMsg("hello!", "boo");
                     }
                     
-                    conn.onclose = function (evt) {
-                        setWsStatusText("closed")
+                    conn.onclose = (evt) => {
+                        if (event.wasClean) {
+                            setWsLocalStatusText('ok', `Closed: Connection closed cleanly, code=${event.code} reason=${event.reason}`);
+                        } else {
+                            // e.g. server process killed or network down
+                            // event.code is usually 1006 in this case
+                            setWsLocalStatusText('error', 'Closed: Connection died');
+                        }
                     };
 
-                    conn.onmessage = function (evt) {
+                    conn.onmessage = (evt) => {
                         const msg = JSON.parse(evt.data);
                         switch(msg.type) {
                             case "server-status":
@@ -118,28 +103,14 @@
                             default:
                                 console.error(`Unhandled message type ${msg.type}`);
                         }
-                
-
-/*
-                        var messages = evt.data.split('\n');
-                        for (var i = 0; i < messages.length; i++) {
-                            var item = document.createElement("div");
-                            item.innerText = messages[i];
-                            appendLog(item);
-                        }
-                        */
                     };
-                } else {
-                    var item = document.createElement("div");
-                    item.innerHTML = "<b>Your browser does not support WebSockets.</b>";
-                    appendLog(item);
                 }
             };
         </script>
     </head>
     <body>
         <div class="container">
-            <h1>Bytejammer!</h1>
+            <h1><img src="/static/media/bytejammer-icon.png" alt="ByteJammer icon"> ByteJammer</h1>
 
             <div class="card mt-4 mb-4">
                 <div class="card-header">
@@ -228,7 +199,8 @@
 
             <div class="fixed-bottom">
                 <div class="container">
-                    <div id="ws-status"></div>
+                    <div>Connection to Local: <span id="ws-local-status" class="fw-bold">(none)</span></div>
+                    <div>Connection to Remote: <span id="ws-server-status" class="fw-bold">(none)</span></div>
                 </div>
             </div>
         </div>

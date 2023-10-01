@@ -1,4 +1,4 @@
-# Bytejammer
+# ByteJammer
 
 An attempt to replicate the [Bytejam launcher](https://github.com/glastonbridge/bytejams), in a single executable, to use WebSockets.
 

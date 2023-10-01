@@ -11,15 +11,16 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/tyler-sommer/stick"
+
+	"github.com/creativenucleus/bytejammer/embed"
 )
 
 type ClientPanel struct {
-	workDir string
 	// #TODO: lock down to receiver only
 	chSendServerStatus chan ClientServerStatus
 }
 
-func startClientPanel(workDir string, port int) error {
+func startClientPanel(port int) error {
 	// Replace this with a random string...
 	session := "session"
 
@@ -38,7 +39,6 @@ func startClientPanel(workDir string, port int) error {
 	fmt.Printf("In a web browser, go to http://localhost:%d/%s\n", port, session)
 
 	cp := ClientPanel{
-		workDir:            workDir,
 		chSendServerStatus: make(chan ClientServerStatus),
 	}
 	http.HandleFunc(fmt.Sprintf("/%s", session), cp.webClientIndex)
@@ -55,7 +55,7 @@ func startClientPanel(workDir string, port int) error {
 func (cp *ClientPanel) webClientIndex(w http.ResponseWriter, r *http.Request) {
 	env := stick.New(nil)
 
-	err := env.Execute(string(clientIndexHtml), w, map[string]stick.Value{"session_key": "session"})
+	err := env.Execute(string(embed.ClientIndexHtml), w, map[string]stick.Value{"session_key": "session"})
 	if err != nil {
 		log.Println("write:", err)
 	}
@@ -64,7 +64,7 @@ func (cp *ClientPanel) webClientIndex(w http.ResponseWriter, r *http.Request) {
 func (cp *ClientPanel) webClientApiIdentityJSON(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		identities, err := getIdentities(cp.workDir)
+		identities, err := getIdentities()
 		if err != nil {
 			apiOutErr(w, err, http.StatusInternalServerError)
 			return
@@ -85,7 +85,7 @@ func (cp *ClientPanel) webClientApiIdentityJSON(w http.ResponseWriter, r *http.R
 			return
 		}
 
-		err = makeIdentity(cp.workDir, req.DisplayName)
+		err = makeIdentity(req.DisplayName)
 		if err != nil {
 			apiOutErr(w, err, http.StatusInternalServerError)
 			return
@@ -119,7 +119,7 @@ func (cp *ClientPanel) webClientApiJoinServerJSON(w http.ResponseWriter, r *http
 		}
 
 		fmt.Println(req.IdentityId)
-		identity, err := getIdentity(cp.workDir, req.IdentityId)
+		identity, err := getIdentity(req.IdentityId)
 		if err != nil {
 			apiOutErr(w, err, http.StatusBadRequest)
 			return
@@ -131,7 +131,7 @@ func (cp *ClientPanel) webClientApiJoinServerJSON(w http.ResponseWriter, r *http
 			return
 		}
 
-		err = startClientServerConn(cp.workDir, req.Host, port, identity, cp.chSendServerStatus)
+		err = startClientServerConn(req.Host, port, identity, cp.chSendServerStatus)
 		if err != nil {
 			apiOutErr(w, err, http.StatusInternalServerError)
 			return

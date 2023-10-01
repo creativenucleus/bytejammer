@@ -2,7 +2,7 @@ package main
 
 import "log"
 
-func startClientJukebox(workDir string, host string, port int, playlist *Playlist) error {
+func startClientJukebox(host string, port int, playlist *Playlist) error {
 	ch := make(chan Msg)
 	j, err := NewJukebox(playlist, &ch)
 	if err != nil {

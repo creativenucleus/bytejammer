@@ -1,14 +1,19 @@
 package main
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
-	"math/rand"
 	"net/http"
 	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/tyler-sommer/stick"
+
+	"github.com/creativenucleus/bytejammer/embed"
+	"github.com/creativenucleus/bytejammer/machines"
+	"github.com/creativenucleus/bytejammer/server"
 )
 
 const statusSendPeriod = 5 * time.Second
@@ -42,7 +47,7 @@ type Server struct {
 	clients []*JamClient
 }
 
-func startServer(workDir string, port int, broadcaster *NusanLauncher) error {
+func startServer(port int, broadcaster *NusanLauncher) error {
 	// Replace this with a random string...
 	session := "session"
 
@@ -67,7 +72,8 @@ func startServer(workDir string, port int, broadcaster *NusanLauncher) error {
 	http.HandleFunc("/", webIndex)
 	http.HandleFunc(fmt.Sprintf("/%s/operator", session), webOperator)
 	http.HandleFunc(fmt.Sprintf("/%s/ws-operator", session), wsOperator(&s))
-	http.HandleFunc("/ws-bytejam", wsBytejam(&s, workDir, broadcaster))
+	http.HandleFunc("/ws-bytejam", wsBytejam(&s, broadcaster))
+	http.HandleFunc(fmt.Sprintf("/%s/api/fantasy-machine.json", session), s.apiFantasyMachine)
 	if err := webServer.ListenAndServe(); err != nil {
 		return err
 	}
@@ -76,7 +82,7 @@ func startServer(workDir string, port int, broadcaster *NusanLauncher) error {
 }
 
 func webIndex(w http.ResponseWriter, r *http.Request) {
-	_, err := w.Write(serverIndexHtml)
+	_, err := w.Write(embed.ServerIndexHtml)
 	if err != nil {
 		log.Println("write:", err)
 	}
@@ -85,9 +91,56 @@ func webIndex(w http.ResponseWriter, r *http.Request) {
 func webOperator(w http.ResponseWriter, r *http.Request) {
 	env := stick.New(nil)
 
-	err := env.Execute(string(serverOperatorHtml), w, map[string]stick.Value{"session_key": "session"})
+	err := env.Execute(string(embed.ServerOperatorHtml), w, map[string]stick.Value{"session_key": "session"})
 	if err != nil {
 		log.Println("write:", err)
+	}
+}
+
+func (cp *Server) apiFantasyMachine(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "POST":
+		// #TODO: Cleaner way to do this?
+		type reqType struct {
+			Platform string `json:"platform"`
+			Mode     string `json:"mode"`
+		}
+
+		var req reqType
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			apiOutErr(w, err, http.StatusBadRequest)
+			return
+		}
+
+		switch req.Mode {
+		case "jammer":
+			_, err := machines.LaunchMachine("TIC-80", true, true, false)
+			if err != nil {
+				// #TODO: propagate error type
+				apiOutErr(w, err, http.StatusBadRequest)
+				return
+			}
+		case "jukebox":
+			playlist, err := readPlaylist("")
+			if err != nil {
+				apiOutErr(w, err, http.StatusInternalServerError)
+				return
+			}
+
+			err = startLocalJukebox(playlist)
+			if err != nil {
+				apiOutErr(w, err, http.StatusInternalServerError)
+				return
+			}
+		default:
+			apiOutErr(w, errors.New("Unexpected mode (should be jammer or jukebox)"), http.StatusBadRequest)
+		}
+
+		apiOutResponse(w, nil, http.StatusCreated)
+
+	default:
+		apiOutErr(w, errors.New("Method not allowed"), http.StatusMethodNotAllowed)
 	}
 }
 
@@ -138,12 +191,12 @@ func wsOperatorWrite(s *Server, c *websocket.Conn) {
 		//		case <-done:
 		//			return
 		case <-statusTicker.C:
-			s.sendStatus(c)
+			s.sendServerStatus(c)
 		}
 	}
 }
 
-func wsBytejam(s *Server, workDir string, broadcaster *NusanLauncher) func(http.ResponseWriter, *http.Request) {
+func wsBytejam(s *Server, broadcaster *NusanLauncher) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		conn, err := wsUpgrader.Upgrade(w, r, nil)
 		if err != nil {
@@ -152,23 +205,24 @@ func wsBytejam(s *Server, workDir string, broadcaster *NusanLauncher) func(http.
 		}
 		defer conn.Close()
 
-		slug := fmt.Sprint(rand.Intn(10000))
-
-		var tic *Tic
+		var m *machines.Machine
 		if broadcaster != nil {
-			tic, err = newNusanServerTic(workDir, slug, broadcaster)
-			if err != nil {
-				log.Print("ERR new TIC:", err)
-				return
-			}
+			/*			tic, err = machines.NewNusanServerTic(slug, broadcaster)
+						if err != nil {
+							log.Print("ERR new TIC:", err)
+							return
+						}
+			*/
+			log.Print("not implemented")
+			return
 		} else {
-			tic, err = newServerTic(workDir, slug)
+			m, err = machines.LaunchMachine("TIC-80", true, false, true)
 			if err != nil {
 				log.Print("ERR new TIC:", err)
 				return
 			}
 		}
-		defer tic.shutdown()
+		defer m.Shutdown()
 
 		// #TODO: Write lock this...
 		client := JamClient{
@@ -177,7 +231,7 @@ func wsBytejam(s *Server, workDir string, broadcaster *NusanLauncher) func(http.
 		}
 		s.clients = append(s.clients, &client)
 
-		go client.runServerWsClientRead(tic)
+		go client.runServerWsClientRead(m.Tic)
 		//		go runServerWsClientWrite(conn, tic)
 
 		// #TODO: handle exit
@@ -186,7 +240,7 @@ func wsBytejam(s *Server, workDir string, broadcaster *NusanLauncher) func(http.
 	}
 }
 
-func (jc *JamClient) runServerWsClientRead(tic *Tic) {
+func (jc *JamClient) runServerWsClientRead(tic *machines.Tic) {
 	for {
 		var msg Msg
 		err := jc.conn.ReadJSON(&msg)
@@ -199,10 +253,10 @@ func (jc *JamClient) runServerWsClientRead(tic *Tic) {
 		case "code":
 			code := msg.Code
 			if jc.displayName != "" {
-				code = ticCodeAddAuthor(code, jc.displayName)
+				code = machines.TicCodeAddAuthor(code, jc.displayName)
 			}
 
-			err = tic.importCode(code)
+			err = tic.ImportCode(code)
 			if err != nil {
 				log.Println("ERR read:", err)
 				break
@@ -217,25 +271,54 @@ func (jc *JamClient) runServerWsClientRead(tic *Tic) {
 	}
 }
 
-type MsgStatus struct {
+type MsgServerStatus struct {
 	Type string `json:"type"`
 	Data struct {
 		Clients []struct {
-			DisplayName string
+			DisplayName  string
+			Status       string
+			LastPingTime time.Time
+		}
+		FantasyMachines []struct {
+			MachineName       string
+			Platform          string
+			Status            string
+			JammerDisplayName string
+			LastSnapshotTime  time.Time
 		}
 	} `json:"data"`
 }
 
-func (s *Server) sendStatus(c *websocket.Conn) {
-	msg := MsgStatus{
-		Type: "status",
+func (s *Server) sendServerStatus(c *websocket.Conn) {
+	msg := MsgServerStatus{
+		Type: "server-status",
 	}
 
 	for _, jc := range s.clients {
 		msg.Data.Clients = append(msg.Data.Clients, struct {
-			DisplayName string
+			DisplayName  string
+			Status       string
+			LastPingTime time.Time
 		}{
-			DisplayName: jc.displayName,
+			DisplayName:  jc.displayName,
+			Status:       "waiting",
+			LastPingTime: time.Now(),
+		})
+	}
+
+	for i, m := range machines.MACHINES {
+		msg.Data.FantasyMachines = append(msg.Data.FantasyMachines, struct {
+			MachineName       string
+			Platform          string
+			Status            string
+			JammerDisplayName string
+			LastSnapshotTime  time.Time
+		}{
+			MachineName:       server.GetFunName(i),
+			Platform:          m.Platform,
+			Status:            "running",
+			JammerDisplayName: "----",
+			LastSnapshotTime:  time.Now(),
 		})
 	}
 
@@ -260,7 +343,7 @@ func (jc *JamClient) resetClient() {
 		"DISPLAY_NAME": jc.displayName,
 	}
 
-	code := ticCodeAddRunSignal(ticCodeReplace(luaClient, replacements))
+	code := machines.TicCodeAddRunSignal(machines.TicCodeReplace(embed.LuaClient, replacements))
 	msg := Msg{Type: "code", Code: code}
 	err := jc.conn.WriteJSON(msg)
 	if err != nil {

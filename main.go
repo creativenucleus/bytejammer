@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 
 	"github.com/urfave/cli/v2"
+
+	"github.com/creativenucleus/bytejammer/config"
 )
 
 const (
@@ -15,16 +17,14 @@ const (
 )
 
 func main() {
-	workDir := "./work/"
-
 	// Make our working directory
-	err := os.MkdirAll(filepath.Clean(workDir), os.ModePerm)
+	err := os.MkdirAll(filepath.Clean(config.WORK_DIR), os.ModePerm)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	fmt.Printf("==================\n")
-	fmt.Printf("Starting Bytejammer\n")
+	fmt.Printf("Starting ByteJammer\n")
 	fmt.Printf("(%s edition)\n", RELEASE_TITLE)
 	fmt.Printf("==================\n")
 
@@ -43,7 +43,7 @@ func main() {
 				},
 				Action: func(cCtx *cli.Context) error {
 					name := cCtx.String("name")
-					err := makeIdentity(workDir, name)
+					err := makeIdentity(name)
 					if err != nil {
 						log.Fatal(err)
 					}
@@ -65,7 +65,7 @@ func main() {
 						log.Fatal(err)
 					}
 
-					err = startLocalJukebox(workDir, playlist)
+					err = startLocalJukebox(playlist)
 					if err != nil {
 						log.Fatal(err)
 					}
@@ -101,7 +101,7 @@ func main() {
 						}
 					}
 
-					err := startServer(workDir, port, broadcaster)
+					err := startServer(port, broadcaster)
 					if err != nil {
 						log.Fatal(err)
 					}
@@ -132,13 +132,13 @@ func main() {
 					port := cCtx.Int("port")
 					//identityString := cCtx.String("identity")
 					/*
-						identity, err := getIdentity(workDir, identityString)
+						identity, err := getIdentity(identityString)
 						if err != nil {
 							log.Fatal(err)
 						}
 					*/
 					identity := &Identity{}
-					err = startClient(workDir, host, port, identity)
+					err = startClient(host, port, identity)
 					if err != nil {
 						log.Fatal(err)
 					}
@@ -172,7 +172,7 @@ func main() {
 						log.Fatal(err)
 					}
 
-					err = startClientJukebox(workDir, host, port, playlist)
+					err = startClientJukebox(host, port, playlist)
 					if err != nil {
 						log.Fatal(err)
 					}

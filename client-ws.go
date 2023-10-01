@@ -2,12 +2,12 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"log"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/creativenucleus/bytejammer/machines"
 )
 
 type ClientWS struct {
@@ -18,7 +18,7 @@ type ClientServerStatus struct {
 	isConnected bool
 }
 
-func startClientServerConn(workDir string, host string, port int, identity *Identity, chServerStatus chan ClientServerStatus) error {
+func startClientServerConn(host string, port int, identity *Identity, chServerStatus chan ClientServerStatus) error {
 	chServerStatus <- ClientServerStatus{isConnected: false}
 	cws := ClientWS{}
 	// Keep running until we make a connection
@@ -38,15 +38,15 @@ func startClientServerConn(workDir string, host string, port int, identity *Iden
 	defer cws.ws.Close()
 	chServerStatus <- ClientServerStatus{isConnected: true}
 
-	slug := fmt.Sprint(rand.Intn(10000))
-	tic, err := newClientTic(workDir, slug)
+	m, err := machines.LaunchMachine("TIC-80", true, true, false)
 	if err != nil {
 		return err
 	}
-	defer tic.shutdown()
+	defer m.Shutdown()
 
-	go cws.clientWsReader(tic)
-	go cws.clientWsWriter(tic, identity)
+	// #TODO: shift import / export to *Machine?
+	go cws.clientWsReader(m.Tic)
+	go cws.clientWsWriter(m.Tic, identity)
 
 	// Lock #TODO: use a channel to escape
 	for {
@@ -62,7 +62,7 @@ func clientOpenConnection(host string, port int) (*SenderWebSocket, error) {
 	return ws, nil
 }
 
-func (cws *ClientWS) clientWsReader(tic *Tic) error {
+func (cws *ClientWS) clientWsReader(tic *machines.Tic) error {
 	for {
 		var msg Msg
 		err := cws.ws.conn.ReadJSON(&msg)
@@ -78,13 +78,13 @@ func (cws *ClientWS) clientWsReader(tic *Tic) error {
 
 		switch msg.Type {
 		case "code":
-			tic.importCode(msg.Code)
+			tic.ImportCode(msg.Code)
 		}
 	}
 }
 
 // #TODO: fatalErr
-func (cws *ClientWS) clientWsWriter(tic *Tic, identity *Identity) {
+func (cws *ClientWS) clientWsWriter(tic *machines.Tic, identity *Identity) {
 	err := cws.ws.sendIdentity(identity)
 	if err != nil {
 		log.Fatal(err)
@@ -102,7 +102,7 @@ func (cws *ClientWS) clientWsWriter(tic *Tic, identity *Identity) {
 		//			return
 		case <-fileCheckTicker.C:
 			// Sends a the local file to the server periodically...
-			data, err := readFile(tic.exportFullpath)
+			data, err := readFile(tic.GetExportFullpath())
 			if err != nil {
 				log.Fatal(err)
 				break

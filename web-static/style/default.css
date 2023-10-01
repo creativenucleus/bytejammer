@@ -4,6 +4,14 @@ html {
     */
 }
 
+#ws-local-status {
+    font-weight: bold;
+}
+
+#ws-remote-status {
+    font-weight: bold;    
+}
+
 #log {
     background: white;
     margin: 0;

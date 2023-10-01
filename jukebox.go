@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"log"
 	"time"
+
+	"github.com/creativenucleus/bytejammer/embed"
+	"github.com/creativenucleus/bytejammer/machines"
 )
 
 const (
@@ -29,12 +32,12 @@ func NewJukebox(playlist *Playlist, comms *chan Msg) (*Jukebox, error) {
 func (j *Jukebox) start() {
 	go func() {
 		// Send the welcome TIC file
-		code := ticCodeReplace(luaJukebox, map[string]string{
+		code := machines.TicCodeReplace(embed.LuaJukebox, map[string]string{
 			"PLAYLIST_ITEM_COUNT": fmt.Sprintf("%d", len(j.playlist.items)),
 			"RELEASE_TITLE":       RELEASE_TITLE,
 		})
 
-		(*j.comms) <- Msg{Type: "code", Code: ticCodeAddRunSignal(code)}
+		(*j.comms) <- Msg{Type: "code", Code: machines.TicCodeAddRunSignal(code)}
 
 		rotateTicker := time.NewTicker(rotatePeriod)
 		defer rotateTicker.Stop()
@@ -59,10 +62,10 @@ func (j *Jukebox) start() {
 
 				code := playlistItem.code
 				if playlistItem.author != "" {
-					code = ticCodeAddAuthor(code, playlistItem.author)
+					code = machines.TicCodeAddAuthor(code, playlistItem.author)
 				}
 
-				code = ticCodeAddRunSignal(code)
+				code = machines.TicCodeAddRunSignal(code)
 				(*j.comms) <- Msg{Type: "code", Code: code}
 			}
 		}

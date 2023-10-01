@@ -3,10 +3,11 @@ package main
 import (
 	"fmt"
 	"log"
-	"math/rand"
+
+	"github.com/creativenucleus/bytejammer/machines"
 )
 
-func startLocalJukebox(workDir string, playlist *Playlist) error {
+func startLocalJukebox(playlist *Playlist) error {
 	fmt.Printf("Starting local jukebox containing %d items\n", len(playlist.items))
 
 	ch := make(chan Msg)
@@ -16,12 +17,11 @@ func startLocalJukebox(workDir string, playlist *Playlist) error {
 		return err
 	}
 
-	slug := fmt.Sprint(rand.Intn(10000))
-	tic, err := newServerTic(workDir, slug)
+	m, err := machines.LaunchMachine("TIC-80", true, false, false)
 	if err != nil {
 		return err
 	}
-	defer tic.shutdown()
+	defer m.Shutdown()
 
 	go func() {
 		for {
@@ -30,7 +30,7 @@ func startLocalJukebox(workDir string, playlist *Playlist) error {
 				if ok {
 					switch msg.Type {
 					case "code":
-						err = tic.importCode(msg.Code)
+						err = m.Tic.ImportCode(msg.Code)
 						if err != nil {
 							// #TODO: soften!
 							log.Fatal(err)

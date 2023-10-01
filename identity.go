@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/creativenucleus/bytejammer/config"
 	"github.com/google/uuid"
 )
 
@@ -13,7 +14,7 @@ type Identity struct {
 	DisplayName string `json:"displayName"`
 }
 
-func makeIdentity(workDir string, displayName string) error {
+func makeIdentity(displayName string) error {
 	uuid := uuid.New()
 
 	identity := Identity{
@@ -25,15 +26,15 @@ func makeIdentity(workDir string, displayName string) error {
 		return err
 	}
 
-	filepath := filepath.Clean(fmt.Sprintf("%sidentity-%s.json", workDir, uuid.String()))
+	filepath := filepath.Clean(fmt.Sprintf("%sidentity-%s.json", config.WORK_DIR, uuid.String()))
 
 	return os.WriteFile(filepath, data, 0644)
 }
 
-func getIdentities(workDir string) (map[string]Identity, error) {
+func getIdentities() (map[string]Identity, error) {
 	identities := make(map[string]Identity, 0)
 
-	filematches, err := filepath.Glob(workDir + "identity-*.json")
+	filematches, err := filepath.Glob(config.WORK_DIR + "identity-*.json")
 	if err != nil {
 		return nil, err
 	}
@@ -54,10 +55,10 @@ func getIdentities(workDir string) (map[string]Identity, error) {
 }
 
 // uuid can be ""
-func getIdentity(workDir string, uuid string) (*Identity, error) {
+func getIdentity(uuid string) (*Identity, error) {
 	identityFilePath := ""
 	if uuid == "" {
-		filematches, err := filepath.Glob(workDir + "identity-*.json")
+		filematches, err := filepath.Glob(config.WORK_DIR + "identity-*.json")
 		if err != nil {
 			return nil, err
 		}
@@ -72,7 +73,7 @@ func getIdentity(workDir string, uuid string) (*Identity, error) {
 
 		identityFilePath = filematches[0]
 	} else {
-		identityFilePath = filepath.Clean(fmt.Sprintf("%sidentity-%s.json", workDir, uuid))
+		identityFilePath = filepath.Clean(fmt.Sprintf("%sidentity-%s.json", config.WORK_DIR, uuid))
 	}
 
 	identity, err := readIdentityFile(identityFilePath)

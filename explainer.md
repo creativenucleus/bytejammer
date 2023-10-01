@@ -1,4 +1,4 @@
-[Bytejammer title.tic]
+[ByteJammer title.tic]
 
 Hello!
 
@@ -44,7 +44,7 @@ But there are a few things that could be improved:
 -> The system communicates with UDP - that means data packets fly off into the internet, and sometimes to the wrong place without raising any errors, which can make joining tricky.
 -> Folks also participate on PC, Mac and Linux, and there's usually a bit of fiddling to onboard new players.
 
-Bytejammer is a new rebuild of the stack and it makes some helpful improvements:
+ByteJammer is a new rebuild of the stack and it makes some helpful improvements:
 -> There's now one standalone executable, no extra scripts and no extra installs
 -> It's multiplatform (written in Go, and builds automatically on GitHub)
 [setup client]
@@ -52,7 +52,7 @@ Bytejammer is a new rebuild of the stack and it makes some helpful improvements:
 [setup server]
 -> There's a setup panel for server
 -> The client can set up an identity so they can be identified by the server
--> Bytejammer communicates via Websockets
+-> ByteJammer communicates via Websockets
     -> that means there's a managed connection - and we can tell if there are disconnects.
     -> Websockets can also talk both ways, so we can do interesting things like sending code the other way - so not just from client to server, but back from the server to the client. I've adapted the TIC Bytebattle version so it can both import and export code at the same time.
 -> We're also able to shim the code as it passes through the system, which means we can do things like add some display code for player names that only runs on the server.
@@ -60,7 +60,7 @@ Bytejammer is a new rebuild of the stack and it makes some helpful improvements:
 
 [playlist.tic]
 
-There are some other things that Bytejammer will open up.
+There are some other things that ByteJammer will open up.
 -> It'll be possible to do periodic snapshots for better recovery when people disconnect, and we can also use that to replay effects being built and to archive them.
 -> The two-way connection means we can experiment with new ways to play, for example:
     -> We can pass code between people - so a few players can build an effect together.
@@ -69,7 +69,7 @@ There are some other things that Bytejammer will open up.
 -> Pushing code around also opens up a workshop setup - an educator can send some starter code to students, and pull back from individuals to showcase or review.
 -> For Byte Jam hosts, the options for setup will expand:
     -> I've been working with Noosan on some experimental modifications to the Bonzomatic launcher, so it can help manage screen layouts for TIC code, and we might also be able to use ByteJammer to add party features to other fantasy consoles. 
--> Overall, Bytejammer offers better management, and that means it's easier to set up more players. Imagine Bob Rosses, all doing their thing! [16 bob ross .tic]
+-> Overall, ByteJammer offers better management, and that means it's easier to set up more players. Imagine Bob Rosses, all doing their thing! [16 bob ross .tic]
 
 -> So, these are all good improvements, but the thing I'm most excited about is another mode, built to help people enjoy and showcase the amazing things creative folks have made with TIC-80.
 -> Let me introduce the ByteJammer Jukebox!
@@ -82,10 +82,10 @@ There are some other things that Bytejammer will open up.
 
 -> And as a final flourish, the jukebox can also be a client for the server version, so livecoders can jam alongside one or more windows that play existing effects.
 
-So, please try Bytejammer. Sit back and enjoy the creativity of our community, and maybe join us on Monday nights for ByteJam and chat!
+So, please try ByteJammer. Sit back and enjoy the creativity of our community, and maybe join us on Monday nights for ByteJam and chat!
 You should follow Field-FX on Mastodon, X, or Discord for more details.
 
-And If you'd like to see Bytejammer running, please ask Violet nicely and she'll show you :)
+And If you'd like to see ByteJammer running, please ask Violet nicely and she'll show you :)
 
 Bye!
 
