@@ -40,7 +40,8 @@ class BjmrWebSocket {
             return false;
         }
 
-        const blob = new Blob([JSON.stringify({type: type, data: data}, null, 2)], {
+        data.type = type;
+        const blob = new Blob([JSON.stringify(data, null, 2)], {
             type: "application/json",
         });
 
@@ -72,4 +73,18 @@ class BjmrAjax {
         });
         return await response.json();
     }
+}
+
+const addToLog = (msg) => {
+    const el = document.getElementById("log");
+    const nowPrintable = formatTime(new Date());
+
+    el.innerHTML += `${nowPrintable} ${msg}<br>`;
+    el.scrollTop = el.scrollHeight;
+}
+
+const formatTime = (date) => {
+    return `${date.getHours()}`.padStart(2,'0')
+        + ':' + `${date.getMinutes()}`.padStart(2,'0')
+        + ':' + `${date.getSeconds()}`.padStart(2,'0');
 }

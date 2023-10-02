@@ -20,6 +20,16 @@
             let CLIENTS = {};
             let FANTASY_MACHINES = {};
 
+            const onClickCloseMachine = (target) => {
+                if (!ws.isOpen()) {
+                    return false;
+                }
+                const uuid = target.getAttribute('data-uuid')
+                addToLog(`Requested close machine ${uuid}`);
+                ws.sendMsg("close-machine", {'close-machine': {uuid: uuid}});
+                return false;
+            };
+
             const handleMsgServerStatus = (data) => {
                 let html = '';
                 if(!data.Clients || data.Clients.length == 0) {
@@ -78,8 +88,8 @@
                         html += `<td>${fantasyMachine.JammerDisplayName}</td>`;
                         html += `<td>${fantasyMachine.LastSnapshotTime}</td>`;
                         html += `<td>`
-                        html += `<button class="btn btn-primary">Close FM</button> `;
-                        html += `<button class="btn btn-primary">Disconnect Jammer</button> `;
+                        html += `<button class="btn btn-primary" onclick="return onClickCloseMachine(this);" data-uuid=${fantasyMachine.Uuid}>Close Machine</button> `;
+                        html += `<button class="btn btn-primary" data-uuid=${fantasyMachine.Uuid}>Disconnect Jammer</button> `;
                         html += `</td>`;
                         html += `</tr>`;
                     }
@@ -89,13 +99,19 @@
 
                 document.getElementById("fantasy-machines").innerHTML = html;
             }
-                
+
+            const handleMsgLog = (data) => {
+                // TODO: shim server time?
+                addToLog(data.Msg);
+            }
+
             window.onload = () => {
                 document.getElementById("btn-clients").onclick = () => {
                     if (!ws.isOpen()) {
                         return false;
                     }
-                    ws.sendMsg("reset-clients", "");
+                    addToLog(`Sending identfier code to Jammers`);
+                    ws.sendMsg("reset-clients", {});
                     return false;
                 };
 
@@ -111,10 +127,12 @@
                     }
 
                     conn.onopen = () => {
+                        addToLog("Connected to local");
                         setWsLocalStatusText('ok', "Open")
                     }
                     
                     conn.onclose = (evt) => {
+                        addToLog("Disconnected from local");
                         if (event.wasClean) {
                             setWsLocalStatusText('ok', `Closed: Connection closed cleanly, code=${event.code} reason=${event.reason}`);
                         } else {
@@ -128,8 +146,13 @@
                         const msg = JSON.parse(evt.data);
                         switch(msg.type) {
                             case "server-status":
-                                handleMsgServerStatus(msg.data)
+                                handleMsgServerStatus(msg.data);
                                 break;
+
+                            case "log":
+                                handleMsgLog(msg.data);
+                                break;
+
                             default:
                                 console.error(`Unhandled message type ${msg.type}`);
                         }
@@ -137,6 +160,7 @@
                 }
 
                 document.getElementById("start-tic-unassigned").addEventListener("click", (e) => {
+                    addToLog("Requested TIC-80 (unassigned)");
                     e.preventDefault();
                     (async() => {
                         const res = await ajax.makeReq("POST", "fantasy-machine", {platform: "TIC-80", mode: "jammer"})
@@ -144,6 +168,7 @@
                 });
 
                 document.getElementById("start-tic-playlist").addEventListener("click", (e) => {
+                    addToLog("Requested TIC-80 (jukebox)");
                     e.preventDefault();
                     (async() => {
                         const res = await ajax.makeReq("POST", "fantasy-machine", {platform: "TIC-80", mode: "jukebox"})
@@ -160,7 +185,7 @@
 
             <div class="card mt-4 mb-4">
                 <div class="card-header">
-                    <h2>This Server</h2>
+                    <h2>Server</h2>
                 </div>
                 <div class="card-body">
                     <form id="server-setup">
@@ -193,7 +218,7 @@
 
             <div class="card mt-4 mb-4">
                 <div class="card-header">
-                    <h2>Fantasy Machines</h2>
+                    <h2>Machines</h2>
                 </div>
                 <div class="card-body">
                     <div id="fantasy-machines"></div>
@@ -209,12 +234,21 @@
                         </ul>
                     </div>
                     <div class="btn-group">                                           
-                        <button id="btn-clients" class="btn btn-primary">Send IDENTIFIER CODE to Clients</button>
+                        <button id="btn-clients" class="btn btn-primary">Send IDENTIFIER CODE to Jammers</button>
                     </div>
                 </div>
             </div>
+
+            <div class="card mt-4 mb-4">
+                <div class="card-header">
+                    <h2>Log</h2>
+                </div>
+                <div class="card-body">
+                    <div id="log"></div>
+                </div>
+            </div>
         </div>
-    
+
         <div class="fixed-bottom">
             <div class="container">
                 <div>Connection to Local: <span id="ws-local-status">(none)</span></div>

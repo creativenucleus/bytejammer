@@ -68,6 +68,11 @@
                     setServerStatusText(data.IsConnected);
                 }
 
+                const handleMsgLog = (data) => {
+                    // TODO: shim server time?
+                    addToLog(data.Msg);
+                }
+
                 let conn = ws.open("ws://" + document.location.host + "/{{session_key}}/ws-client");
                 if(!conn) {                    
                     setWsLocalStatusText('error', "Your browser does not support WebSockets");
@@ -80,11 +85,13 @@
                     }
 
                     conn.onopen = () => {
+                        addToLog("Connected to local");
                         setWsLocalStatusText('ok', "Open")
                         wsSendMsg("hello!", "boo");
                     }
                     
                     conn.onclose = (evt) => {
+                        addToLog("Disconnected from local");
                         if (event.wasClean) {
                             setWsLocalStatusText('ok', `Closed: Connection closed cleanly, code=${event.code} reason=${event.reason}`);
                         } else {
@@ -100,6 +107,11 @@
                             case "server-status":
                                 handleMsgServerStatus(msg.data)
                                 break;
+
+                            case "log":
+                                handleMsgLog(msg.data);
+                                break;
+
                             default:
                                 console.error(`Unhandled message type ${msg.type}`);
                         }
@@ -194,6 +206,15 @@
                         -->
                         <button type="submit" class="btn btn-primary">Join</button>
                     </form>
+                </div>
+
+                <div class="card mt-4 mb-4">
+                    <div class="card-header">
+                        <h2>Log</h2>
+                    </div>
+                    <div class="card-body">
+                        <div id="log"></div>
+                    </div>
                 </div>
             </div>
 

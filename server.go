@@ -45,6 +45,8 @@ type JamClient struct {
 type Server struct {
 	//	server   *http.Server
 	clients []*JamClient
+	// #TODO: This isn't great - if someone manages to open multiple connections
+	wsOperator *websocket.Conn
 }
 
 func startServer(port int, broadcaster *NusanLauncher) error {
@@ -117,12 +119,15 @@ func (cp *Server) apiFantasyMachine(w http.ResponseWriter, r *http.Request) {
 		case "jammer":
 			m, err := machines.LaunchMachine("TIC-80", true, true, false)
 			m.JammerName = "jtruk"
+			cp.sendLog(fmt.Sprintf("TIC-80 Launched for %s", m.JammerName))
 			if err != nil {
 				// #TODO: propagate error type
 				apiOutErr(w, err, http.StatusBadRequest)
 				return
 			}
 		case "jukebox":
+			cp.sendLog("TIC-80 Launched for (playlist)")
+
 			playlist, err := readPlaylist("")
 			if err != nil {
 				apiOutErr(w, err, http.StatusInternalServerError)
@@ -147,15 +152,20 @@ func (cp *Server) apiFantasyMachine(w http.ResponseWriter, r *http.Request) {
 
 func wsOperator(s *Server) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c, err := wsUpgrader.Upgrade(w, r, nil)
+		var err error
+		s.wsOperator, err = wsUpgrader.Upgrade(w, r, nil)
 		if err != nil {
 			log.Print("upgrade:", err)
 			return
 		}
-		defer c.Close()
 
-		go wsOperatorRead(s, c)
-		go wsOperatorWrite(s, c)
+		defer func() {
+			s.wsOperator.Close()
+			s.wsOperator = nil
+		}()
+
+		go s.wsOperatorRead()
+		go s.wsOperatorWrite()
 
 		// #TODO: handle exit
 		for {
@@ -163,10 +173,10 @@ func wsOperator(s *Server) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func wsOperatorRead(s *Server, c *websocket.Conn) {
+func (s *Server) wsOperatorRead() {
 	for {
 		var msg Msg
-		err := c.ReadJSON(&msg)
+		err := s.wsOperator.ReadJSON(&msg)
 		if err != nil {
 			log.Println("read:", err)
 			break
@@ -175,13 +185,15 @@ func wsOperatorRead(s *Server, c *websocket.Conn) {
 		switch msg.Type {
 		case "reset-clients":
 			s.resetAllClients()
+		case "close-machine":
+			s.closeMachine(msg.CloseMachine)
 		default:
-			log.Printf("Message not understood: %s\n", msg.Type)
+			log.Printf("Message Type not understood: %s\n", msg.Type)
 		}
 	}
 }
 
-func wsOperatorWrite(s *Server, c *websocket.Conn) {
+func (s *Server) wsOperatorWrite() {
 	statusTicker := time.NewTicker(statusSendPeriod)
 	defer func() {
 		statusTicker.Stop()
@@ -192,7 +204,7 @@ func wsOperatorWrite(s *Server, c *websocket.Conn) {
 		//		case <-done:
 		//			return
 		case <-statusTicker.C:
-			s.sendServerStatus(c)
+			s.sendServerStatus()
 		}
 	}
 }
@@ -218,6 +230,8 @@ func wsBytejam(s *Server, broadcaster *NusanLauncher) func(http.ResponseWriter, 
 			return
 		} else {
 			m, err = machines.LaunchMachine("TIC-80", true, false, true)
+			s.sendLog("TIC-80 Launched")
+
 			if err != nil {
 				log.Print("ERR new TIC:", err)
 				return
@@ -272,6 +286,23 @@ func (jc *JamClient) runServerWsClientRead(tic *machines.Tic) {
 	}
 }
 
+type MsgLog struct {
+	Type string `json:"type"`
+	Data struct {
+		Msg string
+	} `json:"data"`
+}
+
+func (s *Server) sendLog(message string) {
+	msg := MsgLog{Type: "log"}
+	msg.Data.Msg = message
+
+	err := s.wsOperator.WriteJSON(&msg)
+	if err != nil {
+		log.Println("read:", err)
+	}
+}
+
 type MsgServerStatus struct {
 	Type string `json:"type"`
 	Data struct {
@@ -281,6 +312,7 @@ type MsgServerStatus struct {
 			LastPingTime string
 		}
 		FantasyMachines []struct {
+			Uuid              string
 			MachineName       string
 			Platform          string
 			Status            string
@@ -290,7 +322,7 @@ type MsgServerStatus struct {
 	} `json:"data"`
 }
 
-func (s *Server) sendServerStatus(c *websocket.Conn) {
+func (s *Server) sendServerStatus() {
 	msg := MsgServerStatus{
 		Type: "server-status",
 	}
@@ -309,12 +341,14 @@ func (s *Server) sendServerStatus(c *websocket.Conn) {
 
 	for i, m := range machines.MACHINES {
 		msg.Data.FantasyMachines = append(msg.Data.FantasyMachines, struct {
+			Uuid              string
 			MachineName       string
 			Platform          string
 			Status            string
 			JammerDisplayName string
 			LastSnapshotTime  string
 		}{
+			Uuid:              m.Uuid.String(),
 			MachineName:       server.GetFunName(i),
 			Platform:          m.Platform,
 			Status:            "running",
@@ -323,7 +357,7 @@ func (s *Server) sendServerStatus(c *websocket.Conn) {
 		})
 	}
 
-	err := c.WriteJSON(&msg)
+	err := s.wsOperator.WriteJSON(&msg)
 	if err != nil {
 		log.Println("read:", err)
 	}
@@ -334,6 +368,16 @@ func (s *Server) resetAllClients() {
 	for _, c := range s.clients {
 		c.resetClient()
 	}
+}
+
+func (s *Server) closeMachine(data DataCloseMachine) {
+	fmt.Printf("CLOSE: %s\n", data.Uuid)
+	err := machines.ShutdownMachine(data.Uuid)
+	if err != nil {
+		log.Println("ERR shutdown:", err)
+	}
+
+	s.sendLog(fmt.Sprintf("Machine %s closed", data.Uuid))
 }
 
 // TODO: Handle error

@@ -22,19 +22,19 @@ func GetFunName(id int) string {
 		"Firebreathing Feast",
 		"Dragon Fruit",
 		"Zest Bomb",
+		"Golden Sunseed",
 		"Stellar Extrusion",
 		"Scaly Custard",
 		"Wayward Moon",
 		"Astringent Clump",
 		"Mock Bottom",
 		"Slapstick Crescent",
+		"Golden Grenade",
 		"Dawn Pustules",
 		"Disguised Delicacy",
 		"Juicy Gaggle",
 		"Crunchy Deluge",
 		"Tremendous Sniffer",
-		//		"Golden Sunseed",
-		//		"Golden Grenade",
 	}
 
 	return names[id%len(names)]

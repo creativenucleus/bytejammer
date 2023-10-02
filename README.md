@@ -1,5 +1,7 @@
 # ByteJammer
 
+(Latest Code and documentation - GitHub)[https://github.com/creativenucleus/bytejammer]
+
 For celebration of the TIC-80 livecoding / effects scene.
 
 - A jukebox / robot VJ that plays TIC-80 effects for personal enjoyment.
@@ -32,7 +34,7 @@ Cross-compatible on Windows, Mac, and Linux.
 ### Jukebox Mode
 
 Default (no arguments) mode will launch into jukebox mode, playing random Bytejams from LCDZ.  
-It could also read a JSON file playlist (from remote and local), play in order or shuffle, and with a specified rotation time.  
+It can be provided with a JSON file playlist (from remote and local) or .zip file.
 Applications:  
     - To project onto a wall at parties to preach the good TIC and Bytejam words.
     - To play at events like the recent Unesco one.
@@ -46,7 +48,7 @@ Applications:
 
 `bytejammer.exe jukebox --playlist .\playlist\trains.json` (play a JSON playlist)
 
-`bytejammer.exe jukebox --playlist .\playlist\nanogems-test-selection.zip` (play files in a ZIP)
+`bytejammer.exe jukebox --playlist .\playlist\nanogems-test-selection.zip` (play files from a .zip)
 
 ### Server Mode
 
@@ -60,7 +62,7 @@ If input+output can work on a client, also maybe useful for education:
     - The server can send some code to all clients
     - After an exercise, pull each in turn to display for showcase.
 
-`bytejammer.exe server --localport 4444`
+`bytejammer.exe server` // (Optional: can specify `--localport 4444`)
 
 The CLI will provide a link to a local server. Open that in a web browser.
 
@@ -73,7 +75,7 @@ Perhaps interaction / stats will be via a web panel?
 Users may create multiple identities on a machine, and copy their keys elsewhere.  
 The client can take snapshots of the player's code as they go.  
 
-`bytejammer.exe --localport 1000`
+`bytejammer.exe client`  // (Optional: can specify `--localport 1000`)
 
 The CLI will provide a link to a local server. Open that in a web browser.  
 
@@ -91,16 +93,22 @@ You can connect a client-jukebox to a remote server, as you would a regular clie
 
 ### TODO
 
+- Logs on web panels.
+- Automatic snapshot on each code run.
+- Better gatekeeping of client 'lobby'.
+- Improve web panels.
 - TIC-80 version management
 - Authentication by key.
 - Clean close/open.
-- Improve web panels.
-- Better gatekeeping of client 'lobby'.
-- Automatic snapshot on each code run.
 - Messaging feature.
+- Obfuscate session
+- Rationalise capitalisation/skewer of AJAX/WS data.
 
 ### Ideas
 
+- Jukebox - play in order or shuffle, and with a specified rotation time.
+- Server - set up different playlists
+- Server - push code snapshots around to clients
 - Autospawn + Limit clients
 - Can data be sent around (palette, sprite, music)?
 - Auto-bundle code for submission to LCDZ? (or should folks be allowed to submit their own best?)

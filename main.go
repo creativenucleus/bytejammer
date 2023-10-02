@@ -76,17 +76,17 @@ func main() {
 				Usage: "Run server mode",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name:     "port",
-						Usage:    "Port",
-						Required: true,
+						Name:  "localport",
+						Usage: "Specify a local port for running the management panel",
+						Value: "4455",
 					},
 					&cli.StringFlag{
 						Name:  "broadcast",
-						Usage: "Broadcast (valid: nusan)",
+						Usage: "Broadcast type (valid: nusan)",
 					},
 				},
 				Action: func(cCtx *cli.Context) error {
-					port := cCtx.Int("port")
+					port := cCtx.Int("localport")
 					broadcast := cCtx.String("broadcast")
 
 					var broadcaster *NusanLauncher
@@ -113,32 +113,15 @@ func main() {
 				Usage: "Run client",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name:  "identity",
-						Usage: "Identity",
-					},
-					&cli.StringFlag{
-						Name:     "host",
-						Usage:    "Host",
-						Required: true,
-					},
-					&cli.StringFlag{
-						Name:     "port",
-						Usage:    "Port",
-						Required: true,
+						Name:  "localport",
+						Usage: "Specify a local port for running the management panel",
+						Value: "1000",
 					},
 				},
 				Action: func(cCtx *cli.Context) error {
-					host := cCtx.String("host")
-					port := cCtx.Int("port")
-					//identityString := cCtx.String("identity")
-					/*
-						identity, err := getIdentity(identityString)
-						if err != nil {
-							log.Fatal(err)
-						}
-					*/
-					identity := &Identity{}
-					err = startClient(host, port, identity)
+					port := cCtx.Int("localport")
+
+					err = startClient(port)
 					if err != nil {
 						log.Fatal(err)
 					}

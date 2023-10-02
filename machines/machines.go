@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+
+	"github.com/google/uuid"
 )
 
 type Machine struct {
@@ -12,6 +14,7 @@ type Machine struct {
 
 	// #TODO: Replace this with some pointer
 	JammerName string
+	Uuid       uuid.UUID
 }
 
 var MACHINES []*Machine
@@ -20,6 +23,7 @@ var MACHINES []*Machine
 func LaunchMachine(platform string, hasImport bool, hasExport bool, isServer bool) (*Machine, error) {
 	m := Machine{
 		Platform: platform,
+		Uuid:     uuid.New(),
 	}
 
 	var err error
@@ -38,6 +42,23 @@ func LaunchMachine(platform string, hasImport bool, hasExport bool, isServer boo
 	MACHINES = append(MACHINES, &m)
 
 	return &m, nil
+}
+
+func ShutdownMachine(uuidString string) error {
+	findUuid, err := uuid.Parse(uuidString)
+	if err != nil {
+		return err
+	}
+
+	for i, m := range MACHINES {
+		if m.Uuid == findUuid {
+			m.Shutdown()
+			MACHINES = append(MACHINES[:i], MACHINES[i+1:]...)
+			return nil
+		}
+	}
+
+	return nil
 }
 
 func (m *Machine) Shutdown() {
