@@ -18,6 +18,7 @@ func startLocalJukebox(playlist *Playlist) error {
 	}
 
 	m, err := machines.LaunchMachine("TIC-80", true, false, false)
+	m.JammerName = "(jukebox)"
 	if err != nil {
 		return err
 	}

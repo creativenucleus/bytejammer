@@ -115,7 +115,8 @@ func (cp *Server) apiFantasyMachine(w http.ResponseWriter, r *http.Request) {
 
 		switch req.Mode {
 		case "jammer":
-			_, err := machines.LaunchMachine("TIC-80", true, true, false)
+			m, err := machines.LaunchMachine("TIC-80", true, true, false)
+			m.JammerName = "jtruk"
 			if err != nil {
 				// #TODO: propagate error type
 				apiOutErr(w, err, http.StatusBadRequest)
@@ -277,14 +278,14 @@ type MsgServerStatus struct {
 		Clients []struct {
 			DisplayName  string
 			Status       string
-			LastPingTime time.Time
+			LastPingTime string
 		}
 		FantasyMachines []struct {
 			MachineName       string
 			Platform          string
 			Status            string
 			JammerDisplayName string
-			LastSnapshotTime  time.Time
+			LastSnapshotTime  string
 		}
 	} `json:"data"`
 }
@@ -298,11 +299,11 @@ func (s *Server) sendServerStatus(c *websocket.Conn) {
 		msg.Data.Clients = append(msg.Data.Clients, struct {
 			DisplayName  string
 			Status       string
-			LastPingTime time.Time
+			LastPingTime string
 		}{
 			DisplayName:  jc.displayName,
 			Status:       "waiting",
-			LastPingTime: time.Now(),
+			LastPingTime: time.Now().Format(time.RFC3339),
 		})
 	}
 
@@ -312,13 +313,13 @@ func (s *Server) sendServerStatus(c *websocket.Conn) {
 			Platform          string
 			Status            string
 			JammerDisplayName string
-			LastSnapshotTime  time.Time
+			LastSnapshotTime  string
 		}{
 			MachineName:       server.GetFunName(i),
 			Platform:          m.Platform,
 			Status:            "running",
-			JammerDisplayName: "----",
-			LastSnapshotTime:  time.Now(),
+			JammerDisplayName: m.JammerName,
+			LastSnapshotTime:  time.Now().Format(time.RFC3339),
 		})
 	}
 

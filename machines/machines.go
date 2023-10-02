@@ -9,6 +9,9 @@ import (
 type Machine struct {
 	Platform string
 	Tic      *Tic
+
+	// #TODO: Replace this with some pointer
+	JammerName string
 }
 
 var MACHINES []*Machine
