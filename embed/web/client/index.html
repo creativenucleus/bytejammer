@@ -87,7 +87,7 @@
                     conn.onopen = () => {
                         addToLog("Connected to local");
                         setWsLocalStatusText('ok', "Open")
-                        wsSendMsg("hello!", "boo");
+                        wsSendMsg("hello!", {});
                     }
                     
                     conn.onclose = (evt) => {
