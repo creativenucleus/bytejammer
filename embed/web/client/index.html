@@ -65,7 +65,9 @@
                 });
 
                 const handleMsgServerStatus = (data) => {
-                    setServerStatusText(data.IsConnected);
+                    // #TODO
+                    console.log(data);
+                    setWsRemoteStatusText('ok', 'connected');
                 }
 
                 const handleMsgLog = (data) => {
@@ -87,7 +89,6 @@
                     conn.onopen = () => {
                         addToLog("Connected to local");
                         setWsLocalStatusText('ok', "Open")
-                        wsSendMsg("hello!", {});
                     }
                     
                     conn.onclose = (evt) => {
@@ -103,9 +104,10 @@
 
                     conn.onmessage = (evt) => {
                         const msg = JSON.parse(evt.data);
+                        console.log(msg)
                         switch(msg.type) {
                             case "server-status":
-                                handleMsgServerStatus(msg.data)
+//                                handleMsgServerStatus(msg.data)
                                 break;
 
                             case "log":
@@ -221,7 +223,7 @@
             <div class="fixed-bottom">
                 <div class="container">
                     <div>Connection to Local: <span id="ws-local-status" class="fw-bold">(none)</span></div>
-                    <div>Connection to Remote: <span id="ws-server-status" class="fw-bold">(none)</span></div>
+                    <div>Connection to Remote: <span id="ws-remote-status" class="fw-bold">(none)</span></div>
                 </div>
             </div>
         </div>

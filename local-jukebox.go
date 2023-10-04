@@ -18,11 +18,12 @@ func startLocalJukebox(playlist *Playlist) error {
 	}
 
 	m, err := machines.LaunchMachine("TIC-80", true, false, false)
-	m.JammerName = "(jukebox)"
 	if err != nil {
-		return err
+		return fmt.Errorf("ERR launch machine: %s", err)
 	}
+
 	defer m.Shutdown()
+	m.JammerName = "(jukebox)"
 
 	go func() {
 		for {

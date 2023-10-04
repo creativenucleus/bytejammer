@@ -5,6 +5,13 @@ const setWsLocalStatusText = (severity, text) => {
     el.className = severity == 'ok' ? 'text-success' : 'text-danger';
 }
 
+// severity: ok, error
+const setWsRemoteStatusText = (severity, text) => {
+    const el = document.getElementById("ws-remote-status")
+    el.innerHTML = text;
+    el.className = severity == 'ok' ? 'text-success' : 'text-danger';
+}
+
 const getDataFromForm = (elForm) => {
     return Object.fromEntries(new FormData(elForm))
 }

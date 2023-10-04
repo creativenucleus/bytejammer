@@ -1,11 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"time"
 
+	"github.com/creativenucleus/bytejammer/config"
 	"github.com/creativenucleus/bytejammer/machines"
 )
 
@@ -113,6 +115,14 @@ func (cws *ClientWS) clientWsWriter(tic *machines.Tic, identity *Identity) {
 				break
 			}
 
+			if ticState.IsRunning {
+				err := saveCode(ticState.Code)
+				if err != nil {
+					log.Fatal(err)
+					break
+				}
+			}
+
 			err = cws.ws.sendCode(*ticState)
 			if err != nil {
 				log.Fatal(err)
@@ -148,4 +158,10 @@ func readFile(filename string) ([]byte, error) {
 		return nil, err
 	}
 	return data, nil
+}
+
+func saveCode(code []byte) error {
+	now := time.Now()
+	path := filepath.Clean(fmt.Sprintf("%scode-%s", config.WORK_DIR, now.Format("20060102-150405")))
+	return os.WriteFile(path, code, 0644)
 }

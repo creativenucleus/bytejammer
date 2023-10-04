@@ -69,11 +69,20 @@ func newTic(slug string, hasImportFile bool, hasExportFile bool, isServer bool /
 	//	if broadcaster == nil {
 	fmt.Printf("Running TIC-80 version [%s]\n", embed.Tic80version)
 
-	tic.ticFilename = filepath.Clean(fmt.Sprintf("%stic80-%s.exe", config.WORK_DIR, slug))
-	err = os.WriteFile(tic.ticFilename, embed.Tic80exe, 0700)
+	// #TODO: multiversion
+	tic.ticFilename = filepath.Clean(fmt.Sprintf("%stic80-%s.exe", config.WORK_DIR, embed.Tic80version))
+	_, err = os.Stat(tic.ticFilename)
 	if err != nil {
-		return nil, err
+		if !os.IsNotExist(err) { // An error we won't handle
+			return nil, err
+		} else { // File doesn't exist - try creating it...
+			err = os.WriteFile(tic.ticFilename, embed.Tic80exe, 0700)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
+
 	tic.cmd = exec.Command(tic.ticFilename, args...)
 	err = tic.cmd.Start()
 	if err != nil {

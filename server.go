@@ -119,13 +119,14 @@ func (cp *Server) apiMachine(w http.ResponseWriter, r *http.Request) {
 		switch req.Mode {
 		case "jammer":
 			m, err := machines.LaunchMachine("TIC-80", true, true, false)
-			m.JammerName = "jtruk"
-			cp.sendLog(fmt.Sprintf("TIC-80 Launched for %s", m.JammerName))
 			if err != nil {
-				// #TODO: propagate error type
-				apiOutErr(w, err, http.StatusBadRequest)
+				apiOutErr(w, fmt.Errorf("jammer: %w", err), http.StatusBadRequest)
 				return
 			}
+
+			m.JammerName = "jtruk"
+			cp.sendLog(fmt.Sprintf("TIC-80 Launched for %s", m.JammerName))
+
 		case "jukebox":
 			cp.sendLog("TIC-80 Launched for (playlist)")
 
@@ -235,12 +236,12 @@ func wsBytejam(s *Server, broadcaster *NusanLauncher) func(http.ResponseWriter, 
 			return
 		} else {
 			m, err = machines.LaunchMachine("TIC-80", true, false, true)
-			s.sendLog("TIC-80 Launched")
-
 			if err != nil {
 				log.Print("ERR new TIC:", err)
 				return
 			}
+
+			s.sendLog("TIC-80 Launched")
 		}
 		defer m.Shutdown()
 
