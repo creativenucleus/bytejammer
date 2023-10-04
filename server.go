@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/tyler-sommer/stick"
 
@@ -38,7 +39,7 @@ const (
 
 type JamClient struct {
 	conn        *websocket.Conn
-	id          int
+	uuid        uuid.UUID
 	displayName string
 }
 
@@ -75,7 +76,7 @@ func startServer(port int, broadcaster *NusanLauncher) error {
 	http.HandleFunc(fmt.Sprintf("/%s/operator", session), webOperator)
 	http.HandleFunc(fmt.Sprintf("/%s/ws-operator", session), wsOperator(&s))
 	http.HandleFunc("/ws-bytejam", wsBytejam(&s, broadcaster))
-	http.HandleFunc(fmt.Sprintf("/%s/api/fantasy-machine.json", session), s.apiFantasyMachine)
+	http.HandleFunc(fmt.Sprintf("/%s/api/machine.json", session), s.apiMachine)
 	if err := webServer.ListenAndServe(); err != nil {
 		return err
 	}
@@ -99,7 +100,7 @@ func webOperator(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (cp *Server) apiFantasyMachine(w http.ResponseWriter, r *http.Request) {
+func (cp *Server) apiMachine(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "POST":
 		// #TODO: Cleaner way to do this?
@@ -185,6 +186,10 @@ func (s *Server) wsOperatorRead() {
 		switch msg.Type {
 		case "reset-clients":
 			s.resetAllClients()
+		case "connect-machine-client":
+			s.connectMachineClient(msg.ConnectMachineClient)
+		case "disconnect-machine-client":
+			s.disconnectMachineClient(msg.DisconnectMachineClient)
 		case "close-machine":
 			s.closeMachine(msg.CloseMachine)
 		default:
@@ -242,7 +247,7 @@ func wsBytejam(s *Server, broadcaster *NusanLauncher) func(http.ResponseWriter, 
 		// #TODO: Write lock this...
 		client := JamClient{
 			conn: conn,
-			id:   len(s.clients),
+			uuid: uuid.New(),
 		}
 		s.clients = append(s.clients, &client)
 
@@ -265,19 +270,19 @@ func (jc *JamClient) runServerWsClientRead(tic *machines.Tic) {
 		}
 
 		switch msg.Type {
-		case "code":
-			code := msg.Code
+		case "tic-state":
+			ts := msg.TicState
 			if jc.displayName != "" {
-				code = machines.TicCodeAddAuthor(code, jc.displayName)
+				ts.SetCode(machines.CodeAddAuthorShim(ts.GetCode(), jc.displayName))
 			}
 
-			err = tic.ImportCode(code)
+			err = tic.WriteImportCode(ts)
 			if err != nil {
 				log.Println("ERR read:", err)
 				break
 			}
 		case "identity":
-			jc.displayName = string(msg.Code)
+			jc.displayName = string(msg.Identity)
 			fmt.Println(jc.displayName)
 
 		default:
@@ -307,13 +312,15 @@ type MsgServerStatus struct {
 	Type string `json:"type"`
 	Data struct {
 		Clients []struct {
+			Uuid         string
 			DisplayName  string
 			Status       string
 			LastPingTime string
 		}
-		FantasyMachines []struct {
+		Machines []struct {
 			Uuid              string
 			MachineName       string
+			ProcessID         int
 			Platform          string
 			Status            string
 			JammerDisplayName string
@@ -329,10 +336,12 @@ func (s *Server) sendServerStatus() {
 
 	for _, jc := range s.clients {
 		msg.Data.Clients = append(msg.Data.Clients, struct {
+			Uuid         string
 			DisplayName  string
 			Status       string
 			LastPingTime string
 		}{
+			Uuid:         jc.uuid.String(),
 			DisplayName:  jc.displayName,
 			Status:       "waiting",
 			LastPingTime: time.Now().Format(time.RFC3339),
@@ -340,9 +349,10 @@ func (s *Server) sendServerStatus() {
 	}
 
 	for i, m := range machines.MACHINES {
-		msg.Data.FantasyMachines = append(msg.Data.FantasyMachines, struct {
+		msg.Data.Machines = append(msg.Data.Machines, struct {
 			Uuid              string
 			MachineName       string
+			ProcessID         int
 			Platform          string
 			Status            string
 			JammerDisplayName string
@@ -350,6 +360,7 @@ func (s *Server) sendServerStatus() {
 		}{
 			Uuid:              m.Uuid.String(),
 			MachineName:       server.GetFunName(i),
+			ProcessID:         m.Tic.GetProcessID(),
 			Platform:          m.Platform,
 			Status:            "running",
 			JammerDisplayName: m.JammerName,
@@ -380,16 +391,38 @@ func (s *Server) closeMachine(data DataCloseMachine) {
 	s.sendLog(fmt.Sprintf("Machine %s closed", data.Uuid))
 }
 
+func (s *Server) connectMachineClient(data DataConnectMachineClient) {
+	fmt.Printf("connect: %s to %s\n", data.ClientUuid, data.MachineUuid)
+	/*	err := machines.ShutdownMachine(data.Uuid)
+		if err != nil {
+			log.Println("ERR shutdown:", err)
+		}
+	*/
+	s.sendLog(fmt.Sprintf("Connected %s to %s", data.ClientUuid, data.MachineUuid))
+}
+
+func (s *Server) disconnectMachineClient(data DataDisconnectMachineClient) {
+	fmt.Printf("Disconnect: %s to %s\n", data.ClientUuid, data.MachineUuid)
+	/*	err := machines.ShutdownMachine(data.Uuid)
+		if err != nil {
+			log.Println("ERR shutdown:", err)
+		}
+	*/
+	s.sendLog(fmt.Sprintf("Disconnected %s from %s", data.ClientUuid, data.MachineUuid))
+}
+
 // TODO: Handle error
 func (jc *JamClient) resetClient() {
-	fmt.Printf("CLIENT RESET: %d\n", jc.id)
-	replacements := map[string]string{
-		"CLIENT_ID":    fmt.Sprintf("%d", jc.id),
-		"DISPLAY_NAME": jc.displayName,
-	}
+	fmt.Printf("CLIENT RESET: %d\n", jc.uuid)
 
-	code := machines.TicCodeAddRunSignal(machines.TicCodeReplace(embed.LuaClient, replacements))
-	msg := Msg{Type: "code", Code: code}
+	ts := machines.MakeTicStateRunning(embed.LuaClient)
+	code := machines.CodeReplace(ts.GetCode(), map[string]string{
+		"CLIENT_ID":    fmt.Sprintf("%s", "Fake machine name"),
+		"DISPLAY_NAME": jc.displayName,
+	})
+	ts.SetCode(code)
+
+	msg := Msg{Type: "tic-state", TicState: ts}
 	err := jc.conn.WriteJSON(msg)
 	if err != nil {
 		log.Println("ERR write:", err)

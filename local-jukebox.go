@@ -30,8 +30,8 @@ func startLocalJukebox(playlist *Playlist) error {
 			case msg, ok := <-ch:
 				if ok {
 					switch msg.Type {
-					case "code":
-						err = m.Tic.ImportCode(msg.Code)
+					case "tic-state":
+						err = m.Tic.WriteImportCode(msg.TicState)
 						if err != nil {
 							// #TODO: soften!
 							log.Fatal(err)

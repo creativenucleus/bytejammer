@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"log"
 	"os"
 	"path/filepath"
@@ -77,8 +76,8 @@ func (cws *ClientWS) clientWsReader(tic *machines.Tic) error {
 		}
 
 		switch msg.Type {
-		case "code":
-			tic.ImportCode(msg.Code)
+		case "tic-state":
+			tic.WriteImportCode(msg.TicState)
 		}
 	}
 }
@@ -95,31 +94,32 @@ func (cws *ClientWS) clientWsWriter(tic *machines.Tic, identity *Identity) {
 		fileCheckTicker.Stop()
 	}()
 
-	lastUpdate := []byte{}
+	var lastTicState *machines.TicState
 	for {
 		select {
 		//		case <-done:
 		//			return
 		case <-fileCheckTicker.C:
 			// Sends a the local file to the server periodically...
-			data, err := readFile(tic.GetExportFullpath())
+			ticState, err := tic.ReadExportCode()
 			if err != nil {
 				log.Fatal(err)
 				break
 			}
 
-			if bytes.Equal(lastUpdate, data) {
+			// If we have a previous state and there's no change, don't send
+			if lastTicState != nil && lastTicState.IsEqual(*ticState) {
 				// Don't send if no change
 				break
 			}
 
-			err = cws.ws.sendCode(data)
+			err = cws.ws.sendCode(*ticState)
 			if err != nil {
 				log.Fatal(err)
 				break
 			}
 
-			lastUpdate = data
+			lastTicState = ticState
 			/*
 				case <-interrupt:
 					log.Println("interrupt")

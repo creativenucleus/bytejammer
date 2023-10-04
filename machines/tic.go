@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"time"
 
 	"github.com/creativenucleus/bytejammer/config"
@@ -25,6 +24,10 @@ type Tic struct {
 
 func (t *Tic) GetExportFullpath() string {
 	return t.exportFullpath
+}
+
+func (t *Tic) GetProcessID() int {
+	return t.cmd.Process.Pid
 }
 
 /*
@@ -124,40 +127,33 @@ func (t *Tic) shutdown() {
 	}
 }
 
-func TicCodeAddRunSignal(code []byte) []byte {
-	return append([]byte("-- pos: 0,0\n"), code...)
-}
-
-func TicCodeAddAuthor(code []byte, author string) []byte {
-	shim := TicCodeReplace(embed.LuaAuthorShim, map[string]string{"DISPLAY_NAME": author})
-	return append(code, shim...)
-}
-
-func TicCodeReplace(code []byte, replacements map[string]string) []byte {
-	args := make([]string, 0)
-	for k, v := range replacements {
-		key := fmt.Sprintf("--[[$%s]]--", k)
-		args = append(args, key)
-		args = append(args, v)
-	}
-
-	replacer := strings.NewReplacer(args...)
-
-	return []byte(replacer.Replace(string(code)))
-}
-
-func (t *Tic) ImportCode(code []byte) error {
+func (t Tic) WriteImportCode(ts TicState) error {
 	if t.importFullpath == "" {
 		log.Fatal("Tried to import code - but file is not set up")
 	}
 
-	return os.WriteFile(t.importFullpath, code, 0644)
+	data, err := ts.MakeDataToImport()
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(t.importFullpath, data, 0644)
 }
 
-func (t *Tic) ExportCode() ([]byte, error) {
+func (t Tic) ReadExportCode() (*TicState, error) {
 	if t.exportFullpath == "" {
 		log.Fatal("Tried to export code - but file is not set up")
 	}
 
-	return os.ReadFile(t.exportFullpath)
+	data, err := os.ReadFile(t.exportFullpath)
+	if err != nil {
+		return nil, err
+	}
+
+	ts, err := MakeTicStateFromExportData(data)
+	if err != nil {
+		return nil, err
+	}
+
+	return ts, nil
 }

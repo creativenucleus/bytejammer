@@ -31,13 +31,14 @@ func NewJukebox(playlist *Playlist, comms *chan Msg) (*Jukebox, error) {
 
 func (j *Jukebox) start() {
 	go func() {
-		// Send the welcome TIC file
-		code := machines.TicCodeReplace(embed.LuaJukebox, map[string]string{
+		ts := machines.MakeTicStateRunning(embed.LuaJukebox)
+		code := machines.CodeReplace(ts.GetCode(), map[string]string{
 			"PLAYLIST_ITEM_COUNT": fmt.Sprintf("%d", len(j.playlist.items)),
 			"RELEASE_TITLE":       RELEASE_TITLE,
 		})
+		ts.SetCode(code)
 
-		(*j.comms) <- Msg{Type: "code", Code: machines.TicCodeAddRunSignal(code)}
+		(*j.comms) <- Msg{Type: "tic-state", TicState: ts}
 
 		rotateTicker := time.NewTicker(rotatePeriod)
 		defer rotateTicker.Stop()
@@ -62,11 +63,11 @@ func (j *Jukebox) start() {
 
 				code := playlistItem.code
 				if playlistItem.author != "" {
-					code = machines.TicCodeAddAuthor(code, playlistItem.author)
+					code = machines.CodeAddAuthorShim(ts.GetCode(), playlistItem.author)
 				}
 
-				code = machines.TicCodeAddRunSignal(code)
-				(*j.comms) <- Msg{Type: "code", Code: code}
+				ts := machines.MakeTicStateRunning(code)
+				(*j.comms) <- Msg{Type: "tic-state", TicState: ts}
 			}
 		}
 	}()

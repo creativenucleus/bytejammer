@@ -18,7 +18,22 @@
             const ajax = new BjmrAjax('{{session_key}}')
 
             let CLIENTS = {};
-            let FANTASY_MACHINES = {};
+            let MACHINES = {};
+
+            const onClickConnectMachine = (machineUuid, clientUuid) => {
+                if (!ws.isOpen()) {
+                    return false;
+                }
+                addToLog(`Requested connect machine ${machineUuid} to ${clientUuid}`);
+                ws.sendMsg("connect-machine-client", {
+                    'connect-machine-client': {
+                        'machine-uuid': machineUuid,
+                        'client-uuid': clientUuid,
+                    }
+                });
+                return false;
+            };
+
 
             const onClickCloseMachine = (target) => {
                 if (!ws.isOpen()) {
@@ -51,8 +66,19 @@
                         html += `<td>${client.Status}</td>`;
                         html += `<td>${client.LastPingTime}</td>`;
                         html += `<td>`
-                        html += `<button class="btn btn-primary">Start New TIC</button> `;
-                        html += `<button class="btn btn-primary">Assign TIC</button> `;
+                        html += `<button class="btn btn-primary">Start Machine</button> `;
+                        if(data.Machines && data.Machines.length > 0) {
+                            html += `<div class="btn-group">`
+                            html += `<button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">`
+                            html += `Assign Machine`
+                            html += `</button>`
+                            html += `<ul class="dropdown-menu">`
+                            for (const machine of data.Machines) {
+                                html += `<li><a class="dropdown-item" onclick="return onClickConnectMachine('${machine.Uuid}', '${client.Uuid}')">${machine.MachineName}</a></li>`
+                            }
+                            html += `</ul>`
+                            html += `</div> `
+                        }
                         html += `<button class="btn btn-primary">Decline</button> `;
                         html += `<button class="btn btn-danger">Block</button> `;
                         html += `</td>`;
@@ -65,8 +91,8 @@
                 document.getElementById("clients").innerHTML = html;
 
                 html = '';
-                if(!data.FantasyMachines || data.FantasyMachines.length == 0) {
-                    html = "<div>No fantasy machines running</div>";
+                if(!data.Machines || data.Machines.length == 0) {
+                    html = "<div>No machines running</div>";
                 } else {
                     html += "<table class=\"table\">";
                     html += `<thead>`;
@@ -80,16 +106,16 @@
                     html += `</tr>`;
                     html += `</thead>`;
                     html += `<tbody>`;
-                    for (const fantasyMachine of data.FantasyMachines) {
+                    for (const machine of data.Machines) {
                         html += `<tr>`;
-                        html += `<td>${fantasyMachine.MachineName}</td>`;
-                        html += `<td>${fantasyMachine.Platform}</td>`;
-                        html += `<td>${fantasyMachine.Status}</td>`;
-                        html += `<td>${fantasyMachine.JammerDisplayName}</td>`;
-                        html += `<td>${fantasyMachine.LastSnapshotTime}</td>`;
+                        html += `<td>${machine.MachineName}<br>(Process: ${machine.ProcessID})</td>`;
+                        html += `<td>${machine.Platform}</td>`;
+                        html += `<td>${machine.Status}</td>`;
+                        html += `<td>${machine.JammerDisplayName}</td>`;
+                        html += `<td>${machine.LastSnapshotTime}</td>`;
                         html += `<td>`
-                        html += `<button class="btn btn-primary" onclick="return onClickCloseMachine(this);" data-uuid=${fantasyMachine.Uuid}>Close Machine</button> `;
-                        html += `<button class="btn btn-primary" data-uuid=${fantasyMachine.Uuid}>Disconnect Jammer</button> `;
+                        html += `<button class="btn btn-primary" onclick="return onClickCloseMachine(this);" data-uuid="${machine.Uuid}">Close Machine</button> `;
+                        html += `<button class="btn btn-primary" data-uuid="${machine.Uuid}">Disconnect Jammer</button> `;
                         html += `</td>`;
                         html += `</tr>`;
                     }
@@ -97,7 +123,7 @@
                     html += "</table>";
                 }
 
-                document.getElementById("fantasy-machines").innerHTML = html;
+                document.getElementById("machines").innerHTML = html;
             }
 
             const handleMsgLog = (data) => {
@@ -163,7 +189,7 @@
                     addToLog("Requested TIC-80 (unassigned)");
                     e.preventDefault();
                     (async() => {
-                        const res = await ajax.makeReq("POST", "fantasy-machine", {platform: "TIC-80", mode: "jammer"})
+                        const res = await ajax.makeReq("POST", "machine", {platform: "TIC-80", mode: "jammer"})
                     })();
                 });
 
@@ -171,7 +197,7 @@
                     addToLog("Requested TIC-80 (jukebox)");
                     e.preventDefault();
                     (async() => {
-                        const res = await ajax.makeReq("POST", "fantasy-machine", {platform: "TIC-80", mode: "jukebox"})
+                        const res = await ajax.makeReq("POST", "machine", {platform: "TIC-80", mode: "jukebox"})
                     })();
                 });
             };
@@ -221,21 +247,19 @@
                     <h2>Machines</h2>
                 </div>
                 <div class="card-body">
-                    <div id="fantasy-machines"></div>
+                    <div id="machines"></div>
                 </div>
                 <div class="card-footer">
                     <div class="btn-group">
                         <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Start Fantasy Machine
+                            Start Machine
                         </button>
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" id="start-tic-unassigned">TIC (unassigned)</a></li>
                             <li><a class="dropdown-item" id="start-tic-playlist">TIC (playlist: LCDZ)</a></li>
                         </ul>
                     </div>
-                    <div class="btn-group">                                           
-                        <button id="btn-clients" class="btn btn-primary">Send IDENTIFIER CODE to Jammers</button>
-                    </div>
+                    <button id="btn-clients" class="btn btn-primary">Send IDENTIFIER CODE to Jammers</button>
                 </div>
             </div>
 

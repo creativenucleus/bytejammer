@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/url"
 
+	"github.com/creativenucleus/bytejammer/machines"
 	"github.com/gorilla/websocket"
 )
 
@@ -34,14 +35,14 @@ func NewWebSocketClient(host string, port int) (*SenderWebSocket, error) {
 	return &s, nil
 }
 
-func (s *SenderWebSocket) sendCode(code []byte) error {
+func (s *SenderWebSocket) sendCode(ts machines.TicState) error {
 	// #TODO: line endings for data? UTF-8?
-	msg := Msg{Type: "code", Code: code}
+	msg := Msg{Type: "tic-state", TicState: ts}
 	return s.conn.WriteJSON(&msg)
 }
 
 func (s *SenderWebSocket) sendIdentity(identity *Identity) error {
-	msg := Msg{Type: "identity", Code: []byte(identity.DisplayName)}
+	msg := Msg{Type: "identity", Identity: identity.DisplayName}
 	return s.conn.WriteJSON(&msg)
 }
 

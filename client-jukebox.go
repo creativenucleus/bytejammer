@@ -21,8 +21,8 @@ func startClientJukebox(host string, port int, playlist *Playlist) error {
 			case msg, ok := <-ch:
 				if ok {
 					switch msg.Type {
-					case "code":
-						err := ws.sendCode(msg.Code)
+					case "tic-state":
+						err := ws.sendCode(msg.TicState)
 						if err != nil {
 							// #TODO: soften!
 							log.Fatal(err)
