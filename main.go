@@ -77,7 +77,7 @@ func main() {
 					&cli.StringFlag{
 						Name:  "localport",
 						Usage: "Specify a local port for running the management panel",
-						Value: "4455",
+						Value: "2000",
 					},
 					&cli.StringFlag{
 						Name:  "broadcast",

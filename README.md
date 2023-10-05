@@ -96,6 +96,7 @@ You can connect a client-jukebox to a remote server, as you would a regular clie
 
 ### TODO
 
+- Add mutexes around WriteJSON.
 - Automatic snapshot on each code run.
 - Better gatekeeping of client 'lobby'.
 - Improve web panels.

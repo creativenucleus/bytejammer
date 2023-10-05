@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -36,6 +37,7 @@ const (
 
 type JamClient struct {
 	conn        *websocket.Conn
+	wsMutex     sync.Mutex
 	uuid        uuid.UUID
 	displayName string
 }
@@ -46,6 +48,7 @@ type Server struct {
 }
 
 func startServer(port int, broadcaster *NusanLauncher, chLog chan string) (*Server, error) {
+	chLog <- fmt.Sprintf("Starting server on port %d", port)
 	// Replace this with a random string...
 	//	session := "session"
 
@@ -266,8 +269,14 @@ func (jc *JamClient) resetClient() {
 	ts.SetCode(code)
 
 	msg := Msg{Type: "tic-state", TicState: ts}
-	err := jc.conn.WriteJSON(msg)
+	err := jc.sendData(msg)
 	if err != nil {
 		log.Println("ERR write:", err)
 	}
+}
+
+func (jc *JamClient) sendData(data interface{}) error {
+	jc.wsMutex.Lock()
+	defer jc.wsMutex.Unlock()
+	return jc.conn.WriteJSON(data)
 }

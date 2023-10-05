@@ -23,10 +23,6 @@ type DataDisconnectMachineClient struct {
 	ClientUuid  string `json:"client-uuid"`
 }
 
-type DataStartServer struct {
-	Port int `json:"port"`
-}
-
 type Msg struct {
 	Type                    string                      `json:"type"`
 	Identity                string                      `json:"identity,omitempty"`
@@ -35,5 +31,4 @@ type Msg struct {
 	ConnectMachineClient    DataConnectMachineClient    `json:"connect-machine-client,omitempty"`
 	DisconnectMachineClient DataDisconnectMachineClient `json:"disconnect-machine-client,omitempty"`
 	CloseMachine            DataCloseMachine            `json:"close-machine,omitempty"`
-	StartServer             DataStartServer             `json:"start-server,omitempty"`
 }

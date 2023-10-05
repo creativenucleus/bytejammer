@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
+	"sync"
 	"time"
 
 	"github.com/creativenucleus/bytejammer/embed"
@@ -16,6 +18,7 @@ import (
 
 type HostPanel struct {
 	wsOperator *websocket.Conn
+	wsMutex    sync.Mutex
 	server     *Server
 	chLog      chan string
 }
@@ -45,6 +48,7 @@ func startHostPanel(port int) error {
 	http.HandleFunc("/", hp.webIndex)
 	http.HandleFunc(fmt.Sprintf("/%s/operator", session), hp.webOperator)
 	http.HandleFunc(fmt.Sprintf("/%s/ws-operator", session), hp.wsWebOperator())
+	http.HandleFunc(fmt.Sprintf("/%s/api/server.json", session), hp.webApiServer)
 	http.HandleFunc(fmt.Sprintf("/%s/api/machine.json", session), hp.webApiMachine)
 	if err := webServer.ListenAndServe(); err != nil {
 		return err
@@ -102,21 +106,14 @@ func (hp *HostPanel) wsOperatorRead() {
 		}
 
 		switch msg.Type {
-		case "start-server":
-			if hp.server != nil {
-				// #TODO: log?
-				break
-			}
-
-			hp.startServer(msg.StartServer)
-			//		case "reset-clients":
-			//			hp.resetAllClients()
-			//		case "connect-machine-client":
-			//			hp.connectMachineClient(msg.ConnectMachineClient)
-			//		case "disconnect-machine-client":
-			//			hp.disconnectMachineClient(msg.DisconnectMachineClient)
-			//		case "close-machine":
-			//			hp.closeMachine(msg.CloseMachine)
+		//		case "reset-clients":
+		//			hp.resetAllClients()
+		//		case "connect-machine-client":
+		//			hp.connectMachineClient(msg.ConnectMachineClient)
+		//		case "disconnect-machine-client":
+		//			hp.disconnectMachineClient(msg.DisconnectMachineClient)
+		//		case "close-machine":
+		//			hp.closeMachine(msg.CloseMachine)
 		case "stop-server":
 			if hp.server == nil {
 				// #TODO: log?
@@ -147,6 +144,46 @@ func (hp *HostPanel) wsOperatorWrite() {
 		case logMsg := <-hp.chLog:
 			hp.sendLog(logMsg)
 		}
+	}
+}
+
+func (hp *HostPanel) webApiServer(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "POST":
+		// #TODO: Cleaner way to do this?
+		type reqType struct {
+			Port string `json:"port"`
+		}
+
+		var req reqType
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			apiOutErr(w, err, http.StatusBadRequest)
+			return
+		}
+
+		port, err := strconv.Atoi(req.Port)
+		if err != nil {
+			apiOutErr(w, err, http.StatusBadRequest)
+			return
+		}
+
+		// #TODO: This is not great - return some detail
+		if hp.server != nil {
+			apiOutErr(w, err, http.StatusBadRequest)
+			return
+		}
+
+		hp.server, err = startServer(port, nil, hp.chLog)
+		if err != nil {
+			apiOutErr(w, err, http.StatusInternalServerError)
+			return
+		}
+
+		hp.sendLog(fmt.Sprintf("Server launched"))
+
+	default:
+		apiOutErr(w, errors.New("Method not allowed"), http.StatusMethodNotAllowed)
 	}
 }
 
@@ -202,19 +239,6 @@ func (hp *HostPanel) webApiMachine(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (hp *HostPanel) startServer(data DataStartServer) {
-	// #TODO: This is not great - return some detail
-	if hp.server != nil {
-		return
-	}
-
-	var err error
-	hp.server, err = startServer(data.Port, nil, hp.chLog)
-	if err != nil {
-		log.Println("read:", err)
-	}
-}
-
 func (hp *HostPanel) sendServerStatus() {
 	// #TODO: This is not great - should be driven by the server tick?
 	if hp.server == nil {
@@ -222,7 +246,7 @@ func (hp *HostPanel) sendServerStatus() {
 	}
 
 	status := hp.server.getStatus()
-	err := hp.wsOperator.WriteJSON(&status)
+	err := hp.sendData(&status)
 	if err != nil {
 		log.Println("read:", err)
 	}
@@ -232,8 +256,14 @@ func (hp *HostPanel) sendLog(message string) {
 	msg := MsgLog{Type: "log"}
 	msg.Data.Msg = message
 
-	err := hp.wsOperator.WriteJSON(&msg)
+	err := hp.sendData(&msg)
 	if err != nil {
 		log.Println("read:", err)
 	}
+}
+
+func (hp *HostPanel) sendData(data interface{}) error {
+	hp.wsMutex.Lock()
+	defer hp.wsMutex.Unlock()
+	return hp.wsOperator.WriteJSON(data)
 }
