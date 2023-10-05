@@ -2,6 +2,13 @@ package main
 
 import "github.com/creativenucleus/bytejammer/machines"
 
+type MsgTicState struct {
+	Code      []byte
+	IsRunning bool
+	CursorX   int
+	CursorY   int
+}
+
 type DataCloseMachine struct {
 	Uuid string `json:"uuid"`
 }
@@ -16,11 +23,8 @@ type DataDisconnectMachineClient struct {
 	ClientUuid  string `json:"client-uuid"`
 }
 
-type MsgTicState struct {
-	Code      []byte
-	IsRunning bool
-	CursorX   int
-	CursorY   int
+type DataStartServer struct {
+	Port int `json:"port"`
 }
 
 type Msg struct {
@@ -31,4 +35,5 @@ type Msg struct {
 	ConnectMachineClient    DataConnectMachineClient    `json:"connect-machine-client,omitempty"`
 	DisconnectMachineClient DataDisconnectMachineClient `json:"disconnect-machine-client,omitempty"`
 	CloseMachine            DataCloseMachine            `json:"close-machine,omitempty"`
+	StartServer             DataStartServer             `json:"start-server,omitempty"`
 }

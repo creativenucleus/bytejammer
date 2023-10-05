@@ -15,6 +15,10 @@ import (
 	"github.com/creativenucleus/bytejammer/embed"
 )
 
+const (
+	fileCheckPeriod = 3 * time.Second
+)
+
 type ClientPanel struct {
 	// #TODO: lock down to receiver only
 	chSendServerStatus chan ClientServerStatus
@@ -44,7 +48,7 @@ func startClientPanel(port int) error {
 	http.HandleFunc(fmt.Sprintf("/%s", session), cp.webClientIndex)
 	http.HandleFunc(fmt.Sprintf("/%s/api/identity.json", session), cp.webClientApiIdentityJSON)
 	http.HandleFunc(fmt.Sprintf("/%s/api/join-server.json", session), cp.webClientApiJoinServerJSON)
-	http.HandleFunc(fmt.Sprintf("/%s/ws-client", session), cp.wsClient())
+	http.HandleFunc(fmt.Sprintf("/%s/ws-client", session), cp.wsWebClient())
 	if err := webServer.ListenAndServe(); err != nil {
 		return err
 	}
@@ -143,7 +147,7 @@ func (cp *ClientPanel) webClientApiJoinServerJSON(w http.ResponseWriter, r *http
 	}
 }
 
-func (cp *ClientPanel) wsClient() func(http.ResponseWriter, *http.Request) {
+func (cp *ClientPanel) wsWebClient() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c, err := wsUpgrader.Upgrade(w, r, nil)
 		if err != nil {
@@ -162,7 +166,6 @@ func (cp *ClientPanel) wsClient() func(http.ResponseWriter, *http.Request) {
 }
 
 func (cp *ClientPanel) wsRead(c *websocket.Conn) {
-	fmt.Println("CLIENT READER STARTED")
 	for {
 		var msg Msg
 		err := c.ReadJSON(&msg)
@@ -187,7 +190,6 @@ func (cp *ClientPanel) wsWrite(c *websocket.Conn) {
 			statusTicker.Stop()
 		}()
 	*/
-	fmt.Println("CLIENT WRITER STARTED")
 	for {
 		select {
 		//		case <-done:

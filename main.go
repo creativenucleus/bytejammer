@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -87,21 +86,22 @@ func main() {
 				},
 				Action: func(cCtx *cli.Context) error {
 					port := cCtx.Int("localport")
-					broadcast := cCtx.String("broadcast")
+					/*
+						broadcast := cCtx.String("broadcast")
 
-					var broadcaster *NusanLauncher
-					if broadcast != "" {
-						if broadcast == "nusan" {
-							broadcaster, err = NusanLauncherConnect(4455)
-							if err != nil {
-								log.Fatal(err)
+						var broadcaster *NusanLauncher
+						if broadcast != "" {
+							if broadcast == "nusan" {
+								broadcaster, err = NusanLauncherConnect(4455)
+								if err != nil {
+									log.Fatal(err)
+								}
+							} else {
+								log.Fatal(errors.New("Unhandled broadcast type"))
 							}
-						} else {
-							log.Fatal(errors.New("Unhandled broadcast type"))
-						}
-					}
+						}*/
 
-					err := startServer(port, broadcaster)
+					err := startHostPanel(port)
 					if err != nil {
 						log.Fatal(err)
 					}
@@ -121,7 +121,7 @@ func main() {
 				Action: func(cCtx *cli.Context) error {
 					port := cCtx.Int("localport")
 
-					err = startClient(port)
+					err = startClientPanel(port)
 					if err != nil {
 						log.Fatal(err)
 					}

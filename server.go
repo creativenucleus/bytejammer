@@ -1,8 +1,6 @@
 package main
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -10,7 +8,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/tyler-sommer/stick"
 
 	"github.com/creativenucleus/bytejammer/embed"
 	"github.com/creativenucleus/bytejammer/machines"
@@ -44,175 +41,33 @@ type JamClient struct {
 }
 
 type Server struct {
-	//	server   *http.Server
 	clients []*JamClient
-	// #TODO: This isn't great - if someone manages to open multiple connections
-	wsOperator *websocket.Conn
+	chLog   chan string
 }
 
-func startServer(port int, broadcaster *NusanLauncher) error {
+func startServer(port int, broadcaster *NusanLauncher, chLog chan string) (*Server, error) {
 	// Replace this with a random string...
-	session := "session"
+	//	session := "session"
 
 	webServer := &http.Server{
 		Addr:              fmt.Sprintf(":%d", port),
 		ReadHeaderTimeout: 3 * time.Second,
 	}
 
-	fs := http.FileServer(http.Dir("./web-static"))
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
-
-	http.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "/web-static/favicon/favicon.ico")
-	})
-
-	fmt.Printf("In a web browser, go to http://localhost:%d/%s/operator\n", port, session)
-
 	s := Server{
 		clients: []*JamClient{},
+		chLog:   chLog,
 	}
 
-	http.HandleFunc("/", webIndex)
-	http.HandleFunc(fmt.Sprintf("/%s/operator", session), webOperator)
-	http.HandleFunc(fmt.Sprintf("/%s/ws-operator", session), wsOperator(&s))
 	http.HandleFunc("/ws-bytejam", wsBytejam(&s, broadcaster))
-	http.HandleFunc(fmt.Sprintf("/%s/api/machine.json", session), s.apiMachine)
-	if err := webServer.ListenAndServe(); err != nil {
-		return err
-	}
+	// #TODO: catch an error!
+	go webServer.ListenAndServe()
 
-	return nil
+	return &s, nil
 }
 
-func webIndex(w http.ResponseWriter, r *http.Request) {
-	_, err := w.Write(embed.ServerIndexHtml)
-	if err != nil {
-		log.Println("write:", err)
-	}
-}
-
-func webOperator(w http.ResponseWriter, r *http.Request) {
-	env := stick.New(nil)
-
-	err := env.Execute(string(embed.ServerOperatorHtml), w, map[string]stick.Value{"session_key": "session"})
-	if err != nil {
-		log.Println("write:", err)
-	}
-}
-
-func (cp *Server) apiMachine(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case "POST":
-		// #TODO: Cleaner way to do this?
-		type reqType struct {
-			Platform string `json:"platform"`
-			Mode     string `json:"mode"`
-		}
-
-		var req reqType
-		err := json.NewDecoder(r.Body).Decode(&req)
-		if err != nil {
-			apiOutErr(w, err, http.StatusBadRequest)
-			return
-		}
-
-		switch req.Mode {
-		case "jammer":
-			m, err := machines.LaunchMachine("TIC-80", true, true, false)
-			if err != nil {
-				apiOutErr(w, fmt.Errorf("jammer: %w", err), http.StatusBadRequest)
-				return
-			}
-
-			m.JammerName = "jtruk"
-			cp.sendLog(fmt.Sprintf("TIC-80 Launched for %s", m.JammerName))
-
-		case "jukebox":
-			cp.sendLog("TIC-80 Launched for (playlist)")
-
-			playlist, err := readPlaylist("")
-			if err != nil {
-				apiOutErr(w, err, http.StatusInternalServerError)
-				return
-			}
-
-			err = startLocalJukebox(playlist)
-			if err != nil {
-				apiOutErr(w, err, http.StatusInternalServerError)
-				return
-			}
-		default:
-			apiOutErr(w, errors.New("Unexpected mode (should be jammer or jukebox)"), http.StatusBadRequest)
-		}
-
-		apiOutResponse(w, nil, http.StatusCreated)
-
-	default:
-		apiOutErr(w, errors.New("Method not allowed"), http.StatusMethodNotAllowed)
-	}
-}
-
-func wsOperator(s *Server) func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var err error
-		s.wsOperator, err = wsUpgrader.Upgrade(w, r, nil)
-		if err != nil {
-			log.Print("upgrade:", err)
-			return
-		}
-
-		defer func() {
-			s.wsOperator.Close()
-			s.wsOperator = nil
-		}()
-
-		go s.wsOperatorRead()
-		go s.wsOperatorWrite()
-
-		// #TODO: handle exit
-		for {
-		}
-	}
-}
-
-func (s *Server) wsOperatorRead() {
-	for {
-		var msg Msg
-		err := s.wsOperator.ReadJSON(&msg)
-		if err != nil {
-			log.Println("read:", err)
-			break
-		}
-
-		switch msg.Type {
-		case "reset-clients":
-			s.resetAllClients()
-		case "connect-machine-client":
-			s.connectMachineClient(msg.ConnectMachineClient)
-		case "disconnect-machine-client":
-			s.disconnectMachineClient(msg.DisconnectMachineClient)
-		case "close-machine":
-			s.closeMachine(msg.CloseMachine)
-		default:
-			log.Printf("Message Type not understood: %s\n", msg.Type)
-		}
-	}
-}
-
-func (s *Server) wsOperatorWrite() {
-	statusTicker := time.NewTicker(statusSendPeriod)
-	defer func() {
-		statusTicker.Stop()
-	}()
-
-	for {
-		select {
-		//		case <-done:
-		//			return
-		case <-statusTicker.C:
-			s.sendServerStatus()
-		}
-	}
+func (s *Server) stop() {
+	fmt.Println("#TODO: implement")
 }
 
 func wsBytejam(s *Server, broadcaster *NusanLauncher) func(http.ResponseWriter, *http.Request) {
@@ -241,7 +96,7 @@ func wsBytejam(s *Server, broadcaster *NusanLauncher) func(http.ResponseWriter, 
 				return
 			}
 
-			s.sendLog("TIC-80 Launched")
+			s.chLog <- "TIC-80 Launched"
 		}
 		defer m.Shutdown()
 
@@ -299,16 +154,6 @@ type MsgLog struct {
 	} `json:"data"`
 }
 
-func (s *Server) sendLog(message string) {
-	msg := MsgLog{Type: "log"}
-	msg.Data.Msg = message
-
-	err := s.wsOperator.WriteJSON(&msg)
-	if err != nil {
-		log.Println("read:", err)
-	}
-}
-
 type MsgServerStatus struct {
 	Type string `json:"type"`
 	Data struct {
@@ -330,7 +175,7 @@ type MsgServerStatus struct {
 	} `json:"data"`
 }
 
-func (s *Server) sendServerStatus() {
+func (s *Server) getStatus() MsgServerStatus {
 	msg := MsgServerStatus{
 		Type: "server-status",
 	}
@@ -369,10 +214,7 @@ func (s *Server) sendServerStatus() {
 		})
 	}
 
-	err := s.wsOperator.WriteJSON(&msg)
-	if err != nil {
-		log.Println("read:", err)
-	}
+	return msg
 }
 
 func (s *Server) resetAllClients() {
@@ -389,7 +231,7 @@ func (s *Server) closeMachine(data DataCloseMachine) {
 		log.Println("ERR shutdown:", err)
 	}
 
-	s.sendLog(fmt.Sprintf("Machine %s closed", data.Uuid))
+	s.chLog <- fmt.Sprintf("Machine %s closed", data.Uuid)
 }
 
 func (s *Server) connectMachineClient(data DataConnectMachineClient) {
@@ -399,7 +241,7 @@ func (s *Server) connectMachineClient(data DataConnectMachineClient) {
 			log.Println("ERR shutdown:", err)
 		}
 	*/
-	s.sendLog(fmt.Sprintf("Connected %s to %s", data.ClientUuid, data.MachineUuid))
+	s.chLog <- fmt.Sprintf("Connected %s to %s", data.ClientUuid, data.MachineUuid)
 }
 
 func (s *Server) disconnectMachineClient(data DataDisconnectMachineClient) {
@@ -409,7 +251,7 @@ func (s *Server) disconnectMachineClient(data DataDisconnectMachineClient) {
 			log.Println("ERR shutdown:", err)
 		}
 	*/
-	s.sendLog(fmt.Sprintf("Disconnected %s from %s", data.ClientUuid, data.MachineUuid))
+	s.chLog <- fmt.Sprintf("Disconnected %s from %s", data.ClientUuid, data.MachineUuid)
 }
 
 // TODO: Handle error

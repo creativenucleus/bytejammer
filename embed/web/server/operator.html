@@ -132,15 +132,6 @@
             }
 
             window.onload = () => {
-                document.getElementById("btn-clients").onclick = () => {
-                    if (!ws.isOpen()) {
-                        return false;
-                    }
-                    addToLog(`Sending identfier code to Jammers`);
-                    ws.sendMsg("reset-clients", {});
-                    return false;
-                };
-
                 const conn = ws.open("ws://" + document.location.host + "/{{session_key}}/ws-operator");
                 if(!conn) {                    
                     setWsLocalStatusText('error', "Your browser does not support WebSockets");
@@ -185,17 +176,35 @@
                     }
                 }
 
+                document.getElementById("btn-start-server").onclick = () => {
+                    if (!ws.isOpen()) {
+                        return false;
+                    }
+                    addToLog("Requested Start Server");
+                    ws.sendMsg("start-server", {});
+                    return false;
+                };
+
+                document.getElementById("btn-clients").onclick = () => {
+                    if (!ws.isOpen()) {
+                        return false;
+                    }
+                    addToLog(`Sending identfier code to Jammers`);
+                    ws.sendMsg("reset-clients", {});
+                    return false;
+                };
+
                 document.getElementById("start-tic-unassigned").addEventListener("click", (e) => {
-                    addToLog("Requested TIC-80 (unassigned)");
                     e.preventDefault();
+                    addToLog("Requested TIC-80 (unassigned)");
                     (async() => {
                         const res = await ajax.makeReq("POST", "machine", {platform: "TIC-80", mode: "jammer"})
                     })();
                 });
 
                 document.getElementById("start-tic-playlist").addEventListener("click", (e) => {
-                    addToLog("Requested TIC-80 (jukebox)");
                     e.preventDefault();
+                    addToLog("Requested TIC-80 (jukebox)");
                     (async() => {
                         const res = await ajax.makeReq("POST", "machine", {platform: "TIC-80", mode: "jukebox"})
                     })();
@@ -217,6 +226,19 @@
                     <form id="server-setup">
                         <div class="row g-3 align-items-center">
                             <div class="col-auto">
+                                <label for="port" class="form-label">Port</label>
+                            </div>
+                            <div class="col-auto">
+                                <input type="number" value="4455" class="form-control" id="port" name="port" aria-describedby="port">
+                            </div>
+                            <div class="col-auto">
+                                <span id="displayNameHelp" class="form-text">
+                                    
+                                </span>
+                            </div>
+                        </div>
+                        <div class="row g-3 align-items-center">
+                            <div class="col-auto">
                                 <label for="message" class="form-label">Welcome Message</label>
                             </div>
                             <div class="col-auto">
@@ -228,7 +250,7 @@
                                 </span>
                             </div>
                         </div>
-                        <button type="submit" class="btn btn-primary">Update</button>
+                        <button id="btn-start-server" class="btn btn-primary">Start</button>
                     </form>
                 </div>
             </div>
