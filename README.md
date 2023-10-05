@@ -1,6 +1,6 @@
 # ByteJammer
 
-(Latest Code and documentation - GitHub)[https://github.com/creativenucleus/bytejammer]
+[Latest Code and documentation - GitHub](https://github.com/creativenucleus/bytejammer)
 
 For celebration of the TIC-80 livecoding / effects scene.
 
@@ -29,20 +29,23 @@ Cross-compatible on Windows, Mac, and Linux.
 
 ## Runnning
 
+Make sure you place it in a folder of its own. It will create a subfolder to hold some temporary files.
+
 (Swap `bytejammer.exe` for `bytejammer` on Linux/Mac. You may need to make the file executable with some chmod magic)
 
 ### Jukebox Mode
 
 Default (no arguments) mode will launch into jukebox mode, playing random Bytejams from LCDZ.  
-It can be provided with a JSON file playlist (from remote and local) or .zip file.
+It can be provided with a JSON file playlist (from remote and local) or .zip file.  
+
 Applications:  
-    - To project onto a wall at parties to preach the good TIC and Bytejam words.
-    - To play at events like the recent Unesco one.
-    - For DJ visuals.
-    - Run by a server as a placeholder player for Bytejams.
-    - For people to just enjoy in their own homes.
-    - An ad-hoc retro-style kiosk/ad runner.
-    - For a party to showcase all the entries in a competition.
+    - To project onto a wall at parties to preach the good TIC and Bytejam words.  
+    - To play at events like the recent Unesco one.  
+    - For DJ visuals.  
+    - Run by a server as a placeholder player for Bytejams.  
+    - For people to just enjoy in their own homes.  
+    - An ad-hoc retro-style kiosk/ad runner.  
+    - For a party to showcase all the entries in a competition.  
 
 `bytejammer.exe` (default - Livecode DemoZoo ByteJam playlist)
 
@@ -59,12 +62,12 @@ Clients can be wired to display TICs, which will spawn as appropriate.
 The jukebox is also a client, just run by a robot.  
 The panel will allow the server operator to snapshot code, switch the links between clients and display TICs, and push code to clients.  
 If input+output can work on a client, also maybe useful for education:  
-    - The server can send some code to all clients
-    - After an exercise, pull each in turn to display for showcase.
+    - The server can send some code to all clients  
+    - After an exercise, pull each in turn to display for showcase.  
 
 `bytejammer.exe server` // (Optional: can specify `--localport 4444`)
 
-The CLI will provide a link to a local server. Open that in a web browser.
+The CLI will provide a link to a local server. Open that in a web browser.  
 
 ### Client Mode
 
@@ -93,36 +96,31 @@ You can connect a client-jukebox to a remote server, as you would a regular clie
 
 ### TODO
 
-- Automatic snapshot on each code run (server)
-- Tidy up folders.
-- Delete temp files.
+- Automatic snapshot on each code run.
 - Better gatekeeping of client 'lobby'.
 - Improve web panels.
-- Rename JamHost, JamClient, JamClientJukebox.
-- Start Host server.
-- Check line endings.
-- TIC-80 version management.
+- TIC-80 version management
 - Authentication by key.
-- Clean exit.
+- Clean close/open.
 - Messaging feature.
-- Obfuscate session id.
+- Obfuscate session
 - Rationalise capitalisation/skewer of AJAX/WS data.
 
 ### Ideas
 
-- Pure proxy mode (to sit on a server and facilitate connections between clients without fixed ips).
-- Multiple hosted ports per server?
-- Client can be fed data from other clients on the server (two player mode).
-- Jukebox - play in order or shuffle, and with a specified rotation time.
-- Server - set up different playlists
-- Server - push code snapshots around to clients
-- Autospawn + Limit clients
-- Can data be sent around (palette, sprite, music)?
-- Auto-bundle code for submission to LCDZ? (or should folks be allowed to submit their own best?)
-- Act as a relay (hub), fan out one code to many, or converge / round robin to one display? (applications?)
-- Is possible: Auto layout of OBS Studio, or a layer in between?
-- Code posting to a web client via WebSocket?
-- Support other fantasy consoles (Bazematic? MicroW8? Pico8?) / spec out.
+- Pure proxy mode (to sit on a server and facilitate connections between clients without fixed ips).  
+- Multiple hosted ports per server?  
+- Client can be fed data from other clients on the server (two player mode).  
+- Jukebox - play in order or shuffle, and with a specified rotation time.  
+- Server - set up different playlists  
+- Server - push code snapshots around to clients  
+- Autospawn + Limit clients  
+- Can data be sent around (palette, sprite, music)?  
+- Auto-bundle code for submission to LCDZ? (or should folks be allowed to submit their own best?)  
+- Act as a relay (hub), fan out one code to many, or converge / round robin to one display? (applications?)  
+- Is possible: Auto layout of OBS Studio, or a layer in between?  
+- Code posting to a web client via WebSocket?  
+- Support other fantasy consoles (Bazematic? MicroW8? Pico8?) / spec out.  
 
 ## Alternatives
 
@@ -144,7 +142,7 @@ Thanks to the TIC-80 livecoders, Monday Night ByteJammers, and anyone I forgot!
 
 This project operates with the following sub-licenses:
 
-- Included TIC-80 binaries - [MIT License](https://github.com/nesbox/TIC-80/blob/main/LICENSE)
+- Included TIC-80 binaries - [MIT License](https://github.com/nesbox/TIC-80/blob/main/LICENSE)  
 
 ## Links and References
 
