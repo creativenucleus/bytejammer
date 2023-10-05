@@ -93,19 +93,26 @@ You can connect a client-jukebox to a remote server, as you would a regular clie
 
 ### TODO
 
-- Logs on web panels.
-- Automatic snapshot on each code run.
+- Automatic snapshot on each code run (server)
+- Tidy up folders.
+- Delete temp files.
 - Better gatekeeping of client 'lobby'.
 - Improve web panels.
-- TIC-80 version management
+- Rename JamHost, JamClient, JamClientJukebox.
+- Start Host server.
+- Check line endings.
+- TIC-80 version management.
 - Authentication by key.
-- Clean close/open.
+- Clean exit.
 - Messaging feature.
-- Obfuscate session
+- Obfuscate session id.
 - Rationalise capitalisation/skewer of AJAX/WS data.
 
 ### Ideas
 
+- Pure proxy mode (to sit on a server and facilitate connections between clients without fixed ips).
+- Multiple hosted ports per server?
+- Client can be fed data from other clients on the server (two player mode).
 - Jukebox - play in order or shuffle, and with a specified rotation time.
 - Server - set up different playlists
 - Server - push code snapshots around to clients
@@ -115,7 +122,7 @@ You can connect a client-jukebox to a remote server, as you would a regular clie
 - Act as a relay (hub), fan out one code to many, or converge / round robin to one display? (applications?)
 - Is possible: Auto layout of OBS Studio, or a layer in between?
 - Code posting to a web client via WebSocket?
-- Support other fantasy consoles.
+- Support other fantasy consoles (Bazematic? MicroW8? Pico8?) / spec out.
 
 ## Alternatives
 
@@ -137,7 +144,7 @@ Thanks to the TIC-80 livecoders, Monday Night ByteJammers, and anyone I forgot!
 
 This project operates with the following sub-licenses:
 
-- Included TIC 80 built binaries - [MIT License](https://github.com/nesbox/TIC-80/blob/main/LICENSE)
+- Included TIC-80 binaries - [MIT License](https://github.com/nesbox/TIC-80/blob/main/LICENSE)
 
 ## Links and References
 
