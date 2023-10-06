@@ -5,25 +5,35 @@ import (
 	"fmt"
 	"math/rand"
 
+	"github.com/creativenucleus/bytejammer/server"
 	"github.com/google/uuid"
 )
 
 type Machine struct {
-	Platform string
-	Tic      *Tic
-
-	// #TODO: Replace this with some pointer
-	JammerName string
-	Uuid       uuid.UUID
+	MachineName string
+	Platform    string
+	Tic         *Tic
+	Uuid        uuid.UUID
 }
 
 var MACHINES []*Machine
 
+func GetMachine(findUuid uuid.UUID) *Machine {
+	for _, m := range MACHINES {
+		if m.Uuid == findUuid {
+			return m
+		}
+	}
+
+	return nil
+}
+
 // Ensure Machine.shutdown is called (maybe deferred?)
 func LaunchMachine(platform string, hasImport bool, hasExport bool, isServer bool) (*Machine, error) {
 	m := Machine{
-		Platform: platform,
-		Uuid:     uuid.New(),
+		Platform:    platform,
+		Uuid:        uuid.New(),
+		MachineName: server.GetFunName(len(MACHINES)),
 	}
 
 	var err error

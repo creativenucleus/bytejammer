@@ -34,6 +34,29 @@
                 return false;
             };
 
+            const onClickDisconnectMachine = (machineUuid, clientUuid) => {
+                if (!ws.isOpen()) {
+                    return false;
+                }
+                addToLog(`Requested disconnect machine ${clientUuid} from ${machineUuid}`);
+                ws.sendMsg("disconnect-machine-client", {
+                    'disconnect-machine-client': {
+                        'machine-uuid': machineUuid,
+                        'client-uuid': clientUuid,
+                    }
+                });
+                return false;
+            };
+
+            const onClickStartMachineForClient = (clientUuid) => {
+                if (!ws.isOpen()) {
+                    return false;
+                }
+                addToLog(`Requested TIC-80 for client (${clientUuid})`);
+                (async() => {
+                    const res = await ajax.makeReq("POST", "machine", {platform: "TIC-80", mode: "jammer", "client-uuid": clientUuid})
+                })();
+            };       
 
             const onClickCloseMachine = (target) => {
                 if (!ws.isOpen()) {
@@ -66,21 +89,25 @@
                         html += `<td>${client.Status}</td>`;
                         html += `<td>${client.LastPingTime}</td>`;
                         html += `<td>`
-                        html += `<button class="btn btn-primary">Start Machine</button> `;
-                        if(data.Machines && data.Machines.length > 0) {
-                            html += `<div class="btn-group">`
-                            html += `<button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">`
-                            html += `Assign Machine`
-                            html += `</button>`
-                            html += `<ul class="dropdown-menu">`
-                            for (const machine of data.Machines) {
-                                html += `<li><a class="dropdown-item" onclick="return onClickConnectMachine('${machine.Uuid}', '${client.Uuid}')">${machine.MachineName}</a></li>`
+
+                            console.log(client.MachineUuid);
+                        if (client.MachineUuid == "") {
+                            html += `<button class="btn btn-primary" onclick="return onClickStartMachineForClient('${client.Uuid}')">Start Machine</button> `;
+                            if(data.Machines && data.Machines.length > 0) {
+                                html += `<div class="btn-group">`
+                                html += `<button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">`
+                                html += `Assign Machine`
+                                html += `</button>`
+                                html += `<ul class="dropdown-menu">`
+                                for (const machine of data.Machines) {
+                                    html += `<li><a class="dropdown-item" onclick="return onClickConnectMachine('${machine.Uuid}', '${client.Uuid}')">${machine.MachineName}</a></li>`
+                                }
+                                html += `</ul>`
+                                html += `</div> `
                             }
-                            html += `</ul>`
-                            html += `</div> `
+                            html += `<button class="btn btn-primary">Decline</button> `;
+                            html += `<button class="btn btn-danger">Block</button> `;
                         }
-                        html += `<button class="btn btn-primary">Decline</button> `;
-                        html += `<button class="btn btn-danger">Block</button> `;
                         html += `</td>`;
                         html += `</tr>`;
                     }
@@ -115,7 +142,7 @@
                         html += `<td>${machine.LastSnapshotTime}</td>`;
                         html += `<td>`
                         html += `<button class="btn btn-primary" onclick="return onClickCloseMachine(this);" data-uuid="${machine.Uuid}">Close Machine</button> `;
-                        html += `<button class="btn btn-primary" data-uuid="${machine.Uuid}">Disconnect Jammer</button> `;
+                        html += `<button class="btn btn-primary" onclick="return onClickDisconnectMachine('${machine.Uuid}', '${machine.ClientUuid}')">Disconnect Jammer</button> `;
                         html += `</td>`;
                         html += `</tr>`;
                     }
@@ -203,7 +230,7 @@
                     e.preventDefault();
                     addToLog("Requested TIC-80 (unassigned)");
                     (async() => {
-                        const res = await ajax.makeReq("POST", "machine", {platform: "TIC-80", mode: "jammer"})
+                        const res = await ajax.makeReq("POST", "machine", {platform: "TIC-80", mode: "unassigned"})
                     })();
                 });
 

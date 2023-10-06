@@ -23,7 +23,6 @@ func startLocalJukebox(playlist *Playlist) error {
 	}
 
 	defer m.Shutdown()
-	m.JammerName = "(jukebox)"
 
 	go func() {
 		for {
