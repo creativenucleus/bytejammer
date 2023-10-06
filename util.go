@@ -2,9 +2,11 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 func ensurePathExists(path string, perm fs.FileMode) error {
@@ -18,6 +20,8 @@ func ensurePathExists(path string, perm fs.FileMode) error {
 		if err != nil {
 			return err
 		}
+
+		return nil
 	}
 
 	if !stat.IsDir() {
@@ -25,4 +29,8 @@ func ensurePathExists(path string, perm fs.FileMode) error {
 	}
 
 	return nil
+}
+
+func getSlugFromTime(t time.Time) string {
+	return fmt.Sprintf(t.Format("2006-01-02-15-04-05"))
 }

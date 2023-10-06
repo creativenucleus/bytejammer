@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 
+	"github.com/creativenucleus/bytejammer/config"
 	"github.com/creativenucleus/bytejammer/embed"
 	"github.com/creativenucleus/bytejammer/machines"
 	"github.com/creativenucleus/bytejammer/server"
@@ -36,15 +38,22 @@ const (
 )
 
 type JamClient struct {
-	conn        *websocket.Conn
-	wsMutex     sync.Mutex
-	uuid        uuid.UUID
-	displayName string
+	conn           *websocket.Conn
+	wsMutex        sync.Mutex
+	uuid           uuid.UUID
+	displayName    string
+	lastTicState   *machines.TicState
+	serverBasePath string
 }
 
 type Server struct {
+	slug    string
 	clients []*JamClient
 	chLog   chan string
+}
+
+func (s *Server) getBasePath() string {
+	return fmt.Sprintf("%sserver-session/%s", config.WORK_DIR, s.slug)
 }
 
 func startServer(port int, broadcaster *NusanLauncher, chLog chan string) (*Server, error) {
@@ -58,8 +67,16 @@ func startServer(port int, broadcaster *NusanLauncher, chLog chan string) (*Serv
 	}
 
 	s := Server{
+		slug:    getSlugFromTime(time.Now()),
 		clients: []*JamClient{},
 		chLog:   chLog,
+	}
+
+	basePath := s.getBasePath()
+	chLog <- fmt.Sprintf("Creating directory: %s", basePath)
+	err := ensurePathExists(basePath, os.ModePerm)
+	if err != nil {
+		return nil, err
 	}
 
 	http.HandleFunc("/ws-bytejam", wsBytejam(&s, broadcaster))
@@ -103,11 +120,12 @@ func wsBytejam(s *Server, broadcaster *NusanLauncher) func(http.ResponseWriter, 
 		}
 		defer m.Shutdown()
 
-		// #TODO: Write lock this...
 		client := JamClient{
-			conn: conn,
-			uuid: uuid.New(),
+			conn:           conn,
+			uuid:           uuid.New(),
+			serverBasePath: s.getBasePath(),
 		}
+		// #TODO: Write lock this...
 		s.clients = append(s.clients, &client)
 
 		go client.runServerWsClientRead(m.Tic)
@@ -131,6 +149,19 @@ func (jc *JamClient) runServerWsClientRead(tic *machines.Tic) {
 		switch msg.Type {
 		case "tic-state":
 			ts := msg.TicState
+
+			if jc.lastTicState != nil && ts.IsEqual(*jc.lastTicState) {
+				// We already sent this state
+				continue
+			}
+
+			if ts.IsRunning {
+				// #TODO: I don't think this fully works? Seems to save more than it should
+				// #TODO: slugify displayName!
+				path := fmt.Sprintf("%s/code-%s-%s.lua", jc.serverBasePath, jc.displayName, getSlugFromTime(time.Now()))
+				os.WriteFile(path, []byte(ts.GetCode()), 0644)
+			}
+
 			if jc.displayName != "" {
 				ts.SetCode(machines.CodeAddAuthorShim(ts.GetCode(), jc.displayName))
 			}
@@ -140,6 +171,9 @@ func (jc *JamClient) runServerWsClientRead(tic *machines.Tic) {
 				log.Println("ERR read:", err)
 				break
 			}
+
+			jc.lastTicState = &ts
+
 		case "identity":
 			jc.displayName = string(msg.Identity)
 			fmt.Println(jc.displayName)

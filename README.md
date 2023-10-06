@@ -96,7 +96,6 @@ You can connect a client-jukebox to a remote server, as you would a regular clie
 
 ### TODO
 
-- Add mutexes around WriteJSON.
 - Automatic snapshot on each code run.
 - Better gatekeeping of client 'lobby'.
 - Improve web panels.
@@ -109,6 +108,7 @@ You can connect a client-jukebox to a remote server, as you would a regular clie
 
 ### Ideas
 
+- Wrap WebSocket/Mutex in a class.
 - Pure proxy mode (to sit on a server and facilitate connections between clients without fixed ips).  
 - Multiple hosted ports per server?  
 - Client can be fed data from other clients on the server (two player mode).  
