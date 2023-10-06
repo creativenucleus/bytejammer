@@ -4,13 +4,15 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"sync"
 
 	"github.com/creativenucleus/bytejammer/machines"
 	"github.com/gorilla/websocket"
 )
 
 type SenderWebSocket struct {
-	conn *websocket.Conn
+	conn    *websocket.Conn
+	wsMutex sync.Mutex
 }
 
 // Ensure you:
@@ -35,17 +37,23 @@ func NewWebSocketClient(host string, port int) (*SenderWebSocket, error) {
 	return &s, nil
 }
 
+func (s *SenderWebSocket) Close() {
+	s.conn.Close()
+}
+
 func (s *SenderWebSocket) sendCode(ts machines.TicState) error {
 	// #TODO: line endings for data? UTF-8?
 	msg := Msg{Type: "tic-state", TicState: ts}
-	return s.conn.WriteJSON(&msg)
+	return s.sendData(&msg)
 }
 
 func (s *SenderWebSocket) sendIdentity(identity *Identity) error {
 	msg := Msg{Type: "identity", Identity: identity.DisplayName}
-	return s.conn.WriteJSON(&msg)
+	return s.sendData(&msg)
 }
 
-func (s *SenderWebSocket) Close() {
-	s.conn.Close()
+func (s *SenderWebSocket) sendData(data interface{}) error {
+	s.wsMutex.Lock()
+	defer s.wsMutex.Unlock()
+	return s.conn.WriteJSON(data)
 }

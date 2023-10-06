@@ -17,7 +17,7 @@ const (
 
 func main() {
 	// Make our working directory
-	err := os.MkdirAll(filepath.Clean(config.WORK_DIR), os.ModePerm)
+	err := ensurePathExists(config.WORK_DIR, os.ModePerm)
 	if err != nil {
 		log.Fatal(err)
 	}

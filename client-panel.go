@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -22,6 +23,8 @@ const (
 type ClientPanel struct {
 	// #TODO: lock down to receiver only
 	chSendServerStatus chan ClientServerStatus
+	wsClient           *websocket.Conn
+	wsMutex            sync.Mutex
 }
 
 func startClientPanel(port int) error {
@@ -149,15 +152,16 @@ func (cp *ClientPanel) webClientApiJoinServerJSON(w http.ResponseWriter, r *http
 
 func (cp *ClientPanel) wsWebClient() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c, err := wsUpgrader.Upgrade(w, r, nil)
+		var err error
+		cp.wsClient, err = wsUpgrader.Upgrade(w, r, nil)
 		if err != nil {
 			log.Print("upgrade:", err)
 			return
 		}
-		defer c.Close()
+		defer cp.wsClient.Close()
 
-		go cp.wsRead(c)
-		go cp.wsWrite(c)
+		go cp.wsRead()
+		go cp.wsWrite()
 
 		// #TODO: handle exit
 		for {
@@ -165,10 +169,10 @@ func (cp *ClientPanel) wsWebClient() func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func (cp *ClientPanel) wsRead(c *websocket.Conn) {
+func (cp *ClientPanel) wsRead() {
 	for {
 		var msg Msg
-		err := c.ReadJSON(&msg)
+		err := cp.wsClient.ReadJSON(&msg)
 		if err != nil {
 			log.Println("read:", err)
 			break
@@ -183,7 +187,7 @@ func (cp *ClientPanel) wsRead(c *websocket.Conn) {
 	}
 }
 
-func (cp *ClientPanel) wsWrite(c *websocket.Conn) {
+func (cp *ClientPanel) wsWrite() {
 	/*
 		statusTicker := time.NewTicker(statusSendPeriod)
 		defer func() {
@@ -199,11 +203,17 @@ func (cp *ClientPanel) wsWrite(c *websocket.Conn) {
 
 		case status := <-cp.chSendServerStatus:
 			msg := Msg{Type: "server-status", ServerStatus: status}
-			err := c.WriteJSON(&msg)
+			err := cp.sendData(&msg)
 			if err != nil {
 				// #TODO: relax
 				log.Fatal(err)
 			}
 		}
 	}
+}
+
+func (cp *ClientPanel) sendData(data interface{}) error {
+	cp.wsMutex.Lock()
+	defer cp.wsMutex.Unlock()
+	return cp.wsClient.WriteJSON(data)
 }

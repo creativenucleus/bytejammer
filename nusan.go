@@ -4,14 +4,16 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
 )
 
 type NusanLauncher struct {
-	ch   *chan string
-	conn *websocket.Conn
+	ch      *chan string
+	wsConn  *websocket.Conn
+	wsMutex sync.Mutex
 }
 
 func NusanLauncherConnect(port int) (*NusanLauncher, error) {
@@ -40,14 +42,14 @@ func NusanLauncherConnect(port int) (*NusanLauncher, error) {
 
 func wsNusan(nl NusanLauncher) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		conn, err := wsUpgrader.Upgrade(w, r, nil)
+		var err error
+		nl.wsConn, err = wsUpgrader.Upgrade(w, r, nil)
 		if err != nil {
 			log.Print("ERR upgrade:", err)
 			return
 		}
 		// #TODO: Not great!
-		nl.conn = conn
-		defer conn.Close()
+		defer nl.wsConn.Close()
 
 		go nl.nusanWsOperatorRead()
 		go nl.nusanWsOperatorWrite()
@@ -89,10 +91,16 @@ func (nl *NusanLauncher) nusanWsOperatorWrite() {
 			nlMsg := NusanLauncherMsg{}
 			nlMsg.Data.RoomName = "bytejammer"
 			nlMsg.Data.NickName = msg
-			err := nl.conn.WriteJSON(&nlMsg)
+			err := nl.sendData(&nlMsg)
 			if err != nil {
 				log.Fatal(err)
 			}
 		}
 	}
+}
+
+func (nl *NusanLauncher) sendData(data interface{}) error {
+	nl.wsMutex.Lock()
+	defer nl.wsMutex.Unlock()
+	return nl.wsConn.WriteJSON(data)
 }
