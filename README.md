@@ -29,7 +29,7 @@ Cross-compatible on Windows, Mac, and Linux.
 
 ## Runnning
 
-To get the latest version, visit the [https://github.com/creativenucleus/bytejammer](GitHub repo), click on the `Actions` tab, and then click on the title of the top workflow run. At the bottom of the next page, you'll find a panel called `Artifacts` that contain zip builds. There will be better way to package, and I'll figure it out! :)  
+To get the latest version, visit the [GitHub repo](https://github.com/creativenucleus/bytejammer], click on the `Actions` tab, and then click on the title of the top workflow run. At the bottom of the next page, you'll find a panel called `Artifacts` that contain zip builds. There will be better way to package, and I'll figure it out! :)  
 
 Make sure you place it in a folder of its own. It will create a subfolder to hold some temporary files.
 
