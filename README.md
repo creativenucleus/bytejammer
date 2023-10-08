@@ -54,7 +54,7 @@ Applications:
 
 `bytejammer.exe jukebox --playlist .\playlist\trains.json` (play a JSON playlist)
 
-`bytejammer.exe jukebox --playlist .\playlist\nanogems-test-selection.zip` (play files from a .zip)
+`bytejammer.exe jukebox --playlist .\playlist\example-jams-jtruk.zip` (play files from a .zip)
 
 ### Server Mode
 
