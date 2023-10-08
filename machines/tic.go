@@ -11,6 +11,7 @@ import (
 
 	"github.com/creativenucleus/bytejammer/config"
 	"github.com/creativenucleus/bytejammer/embed"
+	"github.com/creativenucleus/bytejammer/util"
 )
 
 type Tic struct {
@@ -42,9 +43,20 @@ func newTic(slug string, hasImportFile bool, hasExportFile bool, isServer bool /
 		"--skip",
 	}
 
-	var err error
+	exchangefileBasePath := fmt.Sprintf("%s_temp", config.WORK_DIR)
+	err := util.EnsurePathExists(exchangefileBasePath, os.ModePerm)
+	if err != nil {
+		return nil, err
+	}
+
+	exeBasePath := fmt.Sprintf("%sexecutables", config.WORK_DIR)
+	err = util.EnsurePathExists(exeBasePath, os.ModePerm)
+	if err != nil {
+		return nil, err
+	}
+
 	if hasImportFile {
-		tic.importFullpath, err = filepath.Abs(fmt.Sprintf("%simport-%s.lua", config.WORK_DIR, slug))
+		tic.importFullpath, err = filepath.Abs(fmt.Sprintf("%s/import-%s.lua", exchangefileBasePath, slug))
 		if err != nil {
 			return nil, err
 		}
@@ -53,7 +65,7 @@ func newTic(slug string, hasImportFile bool, hasExportFile bool, isServer bool /
 	}
 
 	if hasExportFile {
-		tic.exportFullpath, err = filepath.Abs(fmt.Sprintf("%sexport-%s.lua", config.WORK_DIR, slug))
+		tic.exportFullpath, err = filepath.Abs(fmt.Sprintf("%s/export-%s.lua", exchangefileBasePath, slug))
 		if err != nil {
 			return nil, err
 		}
@@ -70,7 +82,7 @@ func newTic(slug string, hasImportFile bool, hasExportFile bool, isServer bool /
 	fmt.Printf("Running TIC-80 version [%s]\n", embed.Tic80version)
 
 	// #TODO: multiversion
-	tic.ticFilename = filepath.Clean(fmt.Sprintf("%stic80-%s.exe", config.WORK_DIR, embed.Tic80version))
+	tic.ticFilename = filepath.Clean(fmt.Sprintf("%s/tic80-%s.exe", exeBasePath, embed.Tic80version))
 	_, err = os.Stat(tic.ticFilename)
 	if err != nil {
 		if !os.IsNotExist(err) { // An error we won't handle

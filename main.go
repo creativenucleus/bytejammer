@@ -9,6 +9,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/creativenucleus/bytejammer/config"
+	"github.com/creativenucleus/bytejammer/util"
 )
 
 const (
@@ -17,7 +18,7 @@ const (
 
 func main() {
 	// Make our working directory
-	err := ensurePathExists(config.WORK_DIR, os.ModePerm)
+	err := util.EnsurePathExists(config.WORK_DIR, os.ModePerm)
 	if err != nil {
 		log.Fatal(err)
 	}

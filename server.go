@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -15,6 +16,7 @@ import (
 	"github.com/creativenucleus/bytejammer/config"
 	"github.com/creativenucleus/bytejammer/embed"
 	"github.com/creativenucleus/bytejammer/machines"
+	"github.com/creativenucleus/bytejammer/util"
 )
 
 const statusSendPeriod = 5 * time.Second
@@ -44,6 +46,7 @@ type JamClient struct {
 	displayName    string
 	lastTicState   *machines.TicState
 	serverBasePath string
+	publicKey      []byte // This should be a public key type, and we should manage the challenge status
 }
 
 type Server struct {
@@ -55,15 +58,47 @@ type Server struct {
 	broadcaster *NusanLauncher
 }
 
-func MakeServer(chLog chan string) *Server {
-	return &Server{
-		slug:    getSlugFromTime(time.Now()),
+type ServerConfig struct {
+	SessionName string `json:"sessionName"`
+}
+
+func MakeServer(sessionName string, chLog chan string) (*Server, error) {
+	sessionSlug := util.GetSlug(sessionName)
+	if sessionSlug == "" {
+		return nil, errors.New("Invalid session name")
+	}
+
+	s := Server{
+		slug:    fmt.Sprintf("%s_%s", sessionSlug, util.GetSlugFromTime(time.Now())),
 		clients: []*JamClient{},
 		chLog:   chLog,
 
 		// #TODO: This feels a bit hacky!
 		links: make(map[*machines.Machine]*JamClient),
 	}
+
+	basePath := s.getBasePath()
+	chLog <- fmt.Sprintf("Creating directory: %s", basePath)
+	err := util.EnsurePathExists(basePath, os.ModePerm)
+	if err != nil {
+		return nil, err
+	}
+
+	sc := ServerConfig{
+		SessionName: sessionName,
+	}
+
+	configData, err := json.Marshal(sc)
+	if err != nil {
+		return nil, err
+	}
+
+	err = os.WriteFile(fmt.Sprintf("%s/config.json", basePath), configData, 0644)
+	if err != nil {
+		return nil, err
+	}
+
+	return &s, nil
 }
 
 func (s *Server) getClient(clientUuid uuid.UUID) *JamClient {
@@ -118,24 +153,18 @@ func (s *Server) getJamClient(findUuid uuid.UUID) *JamClient {
 }
 
 func (s *Server) getBasePath() string {
-	return fmt.Sprintf("%sserver-session/%s", config.WORK_DIR, s.slug)
+	return fmt.Sprintf("%sserver-data/%s", config.WORK_DIR, s.slug)
 }
 
-func startServer(port int, broadcaster *NusanLauncher, chLog chan string) (*Server, error) {
+func startServer(sessionName string, port int, broadcaster *NusanLauncher, chLog chan string) (*Server, error) {
 	chLog <- fmt.Sprintf("Starting server on port %d", port)
-	// Replace this with a random string...
-	//	session := "session"
 
 	webServer := &http.Server{
 		Addr:              fmt.Sprintf(":%d", port),
 		ReadHeaderTimeout: 3 * time.Second,
 	}
 
-	s := MakeServer(chLog)
-
-	basePath := s.getBasePath()
-	chLog <- fmt.Sprintf("Creating directory: %s", basePath)
-	err := ensurePathExists(basePath, os.ModePerm)
+	s, err := MakeServer(sessionName, chLog)
 	if err != nil {
 		return nil, err
 	}
@@ -195,7 +224,16 @@ func (s *Server) wsBytejam() func(http.ResponseWriter, *http.Request) {
 		//		s.attachClientToMachine(m, &client)
 
 		go s.runServerWsClientRead(&client)
-		//		go runServerWsClientWrite(conn, tic)
+		go s.runServerWsClientWrite(&client)
+
+		msg := Msg{Type: "challenge-request", ChallengeRequest: DataChallengeRequest{Challenge: "This will be a random string!"}}
+		err = client.sendData(msg)
+		if err != nil {
+			log.Println("ERR write:", err)
+		}
+
+		// #TODO: send the server status
+		// hp.sendServerStatus(true)
 
 		// #TODO: handle exit
 		for {
@@ -224,7 +262,7 @@ func (s *Server) runServerWsClientRead(jc *JamClient) {
 			if ts.IsRunning {
 				// #TODO: I don't think this fully works? Seems to save more than it should
 				// #TODO: slugify displayName!
-				path := fmt.Sprintf("%s/code-%s-%s.lua", jc.serverBasePath, jc.displayName, getSlugFromTime(time.Now()))
+				path := fmt.Sprintf("%s/code-%s-%s.lua", jc.serverBasePath, jc.displayName, util.GetSlugFromTime(time.Now()))
 				os.WriteFile(path, []byte(ts.GetCode()), 0644)
 			}
 
@@ -245,12 +283,21 @@ func (s *Server) runServerWsClientRead(jc *JamClient) {
 			jc.lastTicState = &ts
 
 		case "identity":
-			jc.displayName = string(msg.Identity)
-			fmt.Println(jc.displayName)
+			jc.displayName = string(msg.Identity.DisplayName)
+			jc.publicKey = msg.Identity.PublicKey
+
+		case "challenge-response":
+			fmt.Println(msg.ChallengeResponse.Challenge)
 
 		default:
 			log.Printf("Message not understood: %s\n", msg.Type)
 		}
+	}
+}
+
+func (s *Server) runServerWsClientWrite(jc *JamClient) {
+	for {
+		select {}
 	}
 }
 
@@ -297,8 +344,6 @@ func (s *Server) getStatus() MsgServerStatus {
 			status = fmt.Sprintf("Connected: %s", machine.MachineName)
 			machineUuid = machine.Uuid.String()
 		}
-
-		fmt.Println(machineUuid)
 
 		msg.Data.Clients = append(msg.Data.Clients, struct {
 			Uuid         string
@@ -379,8 +424,10 @@ func (s *Server) startMachineForClient(clientUuid uuid.UUID) (*machines.Machine,
 
 func (s *Server) resetAllClients() {
 	fmt.Printf("CLIENTS RESET: %d\n", len(s.clients))
+
 	for _, c := range s.clients {
-		c.resetClient()
+		m := s.getMachineForClient(c)
+		c.sendMachineNameCode(m.MachineName)
 	}
 }
 
@@ -463,12 +510,12 @@ func (s *Server) disconnectMachineClient(data DataDisconnectMachineClient) {
 }
 
 // TODO: Handle error
-func (jc *JamClient) resetClient() {
+func (jc *JamClient) sendMachineNameCode(machineName string) {
 	fmt.Printf("CLIENT RESET: %d\n", jc.uuid)
 
 	ts := machines.MakeTicStateRunning(embed.LuaClient)
 	code := machines.CodeReplace(ts.GetCode(), map[string]string{
-		"CLIENT_ID":    fmt.Sprintf("%s", "Fake machine name"),
+		"CLIENT_ID":    machineName,
 		"DISPLAY_NAME": jc.displayName,
 	})
 	ts.SetCode(code)

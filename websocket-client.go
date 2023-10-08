@@ -48,7 +48,18 @@ func (s *SenderWebSocket) sendCode(ts machines.TicState) error {
 }
 
 func (s *SenderWebSocket) sendIdentity(identity *Identity) error {
-	msg := Msg{Type: "identity", Identity: identity.DisplayName}
+	publicKeyRaw, err := identity.Crypto.publicKeyToRaw()
+	if err != nil {
+		return err
+	}
+
+	msg := Msg{
+		Type: "identity",
+		Identity: DataIdentity{
+			DisplayName: identity.DisplayName,
+			PublicKey:   publicKeyRaw,
+		},
+	}
 	return s.sendData(&msg)
 }
 

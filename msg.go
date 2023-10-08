@@ -9,6 +9,11 @@ type MsgTicState struct {
 	CursorY   int
 }
 
+type DataIdentity struct {
+	DisplayName string `json:"displayName"`
+	PublicKey   []byte `json:"publicKey"`
+}
+
 type DataCloseMachine struct {
 	Uuid string `json:"uuid"`
 }
@@ -23,12 +28,22 @@ type DataDisconnectMachineClient struct {
 	ClientUuid  string `json:"client-uuid"`
 }
 
+type DataChallengeRequest struct {
+	Challenge string `json:"challenge"`
+}
+
+type DataChallengeResponse struct {
+	Challenge string `json:"challenge"`
+}
+
 type Msg struct {
 	Type                    string                      `json:"type"`
-	Identity                string                      `json:"identity,omitempty"`
+	Identity                DataIdentity                `json:"identity,omitempty"`
 	TicState                machines.TicState           `json:"tic-state,omitempty"`
 	ServerStatus            ClientServerStatus          `json:"server-status,omitempty"`
 	ConnectMachineClient    DataConnectMachineClient    `json:"connect-machine-client,omitempty"`
 	DisconnectMachineClient DataDisconnectMachineClient `json:"disconnect-machine-client,omitempty"`
 	CloseMachine            DataCloseMachine            `json:"close-machine,omitempty"`
+	ChallengeRequest        DataChallengeRequest        `json:"challenge-request,omitempty"`
+	ChallengeResponse       DataChallengeResponse       `json:"challenge-response,omitempty"`
 }

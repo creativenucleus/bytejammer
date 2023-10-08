@@ -1,4 +1,4 @@
-package main
+package util
 
 import (
 	"errors"
@@ -7,9 +7,11 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/gosimple/slug"
 )
 
-func ensurePathExists(path string, perm fs.FileMode) error {
+func EnsurePathExists(path string, perm fs.FileMode) error {
 	stat, err := os.Stat(path)
 	if err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
@@ -31,6 +33,10 @@ func ensurePathExists(path string, perm fs.FileMode) error {
 	return nil
 }
 
-func getSlugFromTime(t time.Time) string {
-	return fmt.Sprintf(t.Format("2006-01-02-15-04-05"))
+func GetSlug(in string) string {
+	return slug.Make(in)
+}
+
+func GetSlugFromTime(t time.Time) string {
+	return fmt.Sprintf(t.Format("2006-01-02_15-04-05"))
 }

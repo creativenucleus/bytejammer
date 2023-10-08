@@ -16,11 +16,16 @@ import (
 	"github.com/tyler-sommer/stick"
 )
 
+// HostPanel is the web interface for the host to manage their system, and the port should be private to them.
+// It handles the startup of a server (potentially multiple)
+// It does not handle the connections to the clients directly.
+
 type HostPanel struct {
-	wsOperator *websocket.Conn
-	wsMutex    sync.Mutex
-	server     *Server
-	chLog      chan string
+	wsOperator   *websocket.Conn
+	wsMutex      sync.Mutex
+	server       *Server
+	chLog        chan string
+	statusTicker *time.Ticker
 }
 
 func startHostPanel(port int) error {
@@ -124,17 +129,17 @@ func (hp *HostPanel) wsOperatorRead() {
 }
 
 func (hp *HostPanel) wsOperatorWrite() {
-	statusTicker := time.NewTicker(statusSendPeriod)
+	hp.statusTicker = time.NewTicker(statusSendPeriod)
 	defer func() {
-		statusTicker.Stop()
+		hp.statusTicker.Stop()
 	}()
 
 	for {
 		select {
 		//		case <-done:
 		//			return
-		case <-statusTicker.C:
-			hp.sendServerStatus()
+		case <-hp.statusTicker.C:
+			hp.sendServerStatus(false)
 
 		case logMsg := <-hp.chLog:
 			hp.sendLog(logMsg)
@@ -147,7 +152,8 @@ func (hp *HostPanel) webApiServer(w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		// #TODO: Cleaner way to do this?
 		type reqType struct {
-			Port string `json:"port"`
+			Port        string `json:"port"`
+			SessionName string `json:"session-name"`
 		}
 
 		var req reqType
@@ -169,13 +175,15 @@ func (hp *HostPanel) webApiServer(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		hp.server, err = startServer(port, nil, hp.chLog)
+		hp.server, err = startServer(req.SessionName, port, nil, hp.chLog)
 		if err != nil {
+			hp.chLog <- fmt.Sprintf("Server failed to launch: %s", err)
 			apiOutErr(w, err, http.StatusInternalServerError)
 			return
 		}
 
 		hp.sendLog(fmt.Sprintf("Server launched"))
+		hp.sendServerStatus(true)
 
 	default:
 		apiOutErr(w, errors.New("Method not allowed"), http.StatusMethodNotAllowed)
@@ -239,6 +247,7 @@ func (hp *HostPanel) webApiMachine(w http.ResponseWriter, r *http.Request) {
 			apiOutErr(w, errors.New("Unexpected mode (should be jammer or jukebox)"), http.StatusBadRequest)
 		}
 
+		hp.sendServerStatus(true)
 		apiOutResponse(w, nil, http.StatusCreated)
 
 	default:
@@ -252,6 +261,7 @@ func (hp *HostPanel) handleStopServer() {
 	}
 
 	hp.server.stop()
+	hp.sendServerStatus(true)
 }
 
 func (hp *HostPanel) handleResetAllClients() {
@@ -261,6 +271,7 @@ func (hp *HostPanel) handleResetAllClients() {
 	}
 
 	hp.server.resetAllClients()
+	hp.sendServerStatus(true)
 }
 
 func (hp *HostPanel) handleConnectMachineClient(data DataConnectMachineClient) {
@@ -270,6 +281,7 @@ func (hp *HostPanel) handleConnectMachineClient(data DataConnectMachineClient) {
 	}
 
 	hp.server.connectMachineClient(data)
+	hp.sendServerStatus(true)
 }
 
 func (hp *HostPanel) handleDisconnectMachineClient(data DataDisconnectMachineClient) {
@@ -279,6 +291,7 @@ func (hp *HostPanel) handleDisconnectMachineClient(data DataDisconnectMachineCli
 	}
 
 	hp.server.disconnectMachineClient(data)
+	hp.sendServerStatus(true)
 }
 
 func (hp *HostPanel) handleCloseMachine(data DataCloseMachine) {
@@ -288,12 +301,18 @@ func (hp *HostPanel) handleCloseMachine(data DataCloseMachine) {
 	}
 
 	hp.server.closeMachine(data)
+	hp.sendServerStatus(true)
 }
 
-func (hp *HostPanel) sendServerStatus() {
+// #TODO: resetTicker could be improved - we should set that true if the code requests a status send
+func (hp *HostPanel) sendServerStatus(resetTicker bool) {
 	// #TODO: This is not great - should be driven by the server tick?
 	if hp.server == nil {
 		return
+	}
+
+	if resetTicker {
+		hp.statusTicker.Reset(statusSendPeriod)
 	}
 
 	status := hp.server.getStatus()

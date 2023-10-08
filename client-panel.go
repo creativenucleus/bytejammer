@@ -16,6 +16,10 @@ import (
 	"github.com/creativenucleus/bytejammer/embed"
 )
 
+// ClientPanel is the web interface for the client to manage their connection and the port should be private to them.
+// It handles identity creation, and launching of a connection to the host.
+// It does not handle the connection with the host itself.
+
 const (
 	fileCheckPeriod = 3 * time.Second
 )
@@ -125,7 +129,6 @@ func (cp *ClientPanel) webClientApiJoinServerJSON(w http.ResponseWriter, r *http
 			return
 		}
 
-		fmt.Println(req.IdentityId)
 		identity, err := getIdentity(req.IdentityId)
 		if err != nil {
 			apiOutErr(w, err, http.StatusBadRequest)
@@ -179,8 +182,6 @@ func (cp *ClientPanel) wsRead() {
 		}
 
 		switch msg.Type {
-		case "reset-clients":
-			//			s.resetAllClients()
 		default:
 			log.Printf("Message not understood: %s\n", msg.Type)
 		}

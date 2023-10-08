@@ -105,8 +105,8 @@
                                 html += `</ul>`
                                 html += `</div> `
                             }
-                            html += `<button class="btn btn-primary">Decline</button> `;
-                            html += `<button class="btn btn-danger">Block</button> `;
+                            html += `<button class="btn btn-primary" onclick="alert('Not yet implemented!')">Decline</button> `;
+                            html += `<button class="btn btn-danger" onclick="alert('Not yet implemented!')">Block</button> `;
                         }
                         html += `</td>`;
                         html += `</tr>`;
@@ -205,15 +205,13 @@
 
                 document.getElementById("start-server").addEventListener("submit", (e) => {
                     e.preventDefault();
-                    if (!ws.isOpen()) {
-                        return false;
-                    }
                     const data = getDataFromForm(e.target)
                     e.target.reset();
 
                     addToLog(`Requested Start Server on port: ${data.port}`);
                     (async() => {
-                        const res = await ajax.makeReq("POST", "server", {port: data.port})
+                        const res = await ajax.makeReq("POST", "server", {port: data.port, 'session-name': data['session-name']})
+                        console.log(res);
                     })();
                 });
 
@@ -231,6 +229,7 @@
                     addToLog("Requested TIC-80 (unassigned)");
                     (async() => {
                         const res = await ajax.makeReq("POST", "machine", {platform: "TIC-80", mode: "unassigned"})
+                        console.log(res);
                     })();
                 });
 
@@ -239,6 +238,7 @@
                     addToLog("Requested TIC-80 (jukebox)");
                     (async() => {
                         const res = await ajax.makeReq("POST", "machine", {platform: "TIC-80", mode: "jukebox"})
+                        console.log(res);
                     })();
                 });
             };
@@ -264,21 +264,21 @@
                                 <input type="number" value="4455" class="form-control" id="port" name="port" aria-describedby="port">
                             </div>
                             <div class="col-auto">
-                                <span id="displayNameHelp" class="form-text">
+                                <span id="portHelp" class="form-text">
                                     
                                 </span>
                             </div>
                         </div>
                         <div class="row g-3 align-items-center">
                             <div class="col-auto">
-                                <label for="message" class="form-label">Welcome Message</label>
+                                <label for="session-name" class="form-label">Session Name</label>
                             </div>
                             <div class="col-auto">
-                                <textarea class="form-control" id="port" name="message" aria-describedby="message"></textarea>
+                                <input class="form-control" id="session-name" name="session-name" aria-describedby="session-name">
                             </div>
                             <div class="col-auto">
-                                <span id="welcomeMessageHelp" class="form-text">
-                                    When you accept people's connections, this message will be sent to them.
+                                <span id="sessionNameHelp" class="form-text">
+                                    A directory will be created on your filesystem for this session
                                 </span>
                             </div>
                         </div>

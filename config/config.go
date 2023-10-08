@@ -1,5 +1,5 @@
 package config
 
 const (
-	WORK_DIR = "./work/"
+	WORK_DIR = "./_bytejammer-data/"
 )
