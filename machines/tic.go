@@ -43,6 +43,8 @@ func newTic(slug string, hasImportFile bool, hasExportFile bool, isServer bool /
 		"--skip",
 	}
 
+	fmt.Println(slug)
+
 	exchangefileBasePath := fmt.Sprintf("%s_temp", config.WORK_DIR)
 	err := util.EnsurePathExists(exchangefileBasePath, os.ModePerm)
 	if err != nil {

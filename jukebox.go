@@ -31,14 +31,14 @@ func NewJukebox(playlist *Playlist, comms *chan Msg) (*Jukebox, error) {
 
 func (j *Jukebox) start() {
 	go func() {
-		ts := machines.MakeTicStateRunning(embed.LuaJukebox)
-		code := machines.CodeReplace(ts.GetCode(), map[string]string{
+		tsFirst := machines.MakeTicStateRunning(embed.LuaJukebox)
+		code := machines.CodeReplace(tsFirst.GetCode(), map[string]string{
 			"PLAYLIST_ITEM_COUNT": fmt.Sprintf("%d", len(j.playlist.items)),
 			"RELEASE_TITLE":       RELEASE_TITLE,
 		})
-		ts.SetCode(code)
+		tsFirst.SetCode(code)
 
-		(*j.comms) <- Msg{Type: "tic-state", TicState: ts}
+		(*j.comms) <- Msg{Type: "tic-state", TicState: tsFirst}
 
 		rotateTicker := time.NewTicker(rotatePeriod)
 		defer rotateTicker.Stop()
@@ -62,9 +62,13 @@ func (j *Jukebox) start() {
 				}
 
 				code := playlistItem.code
-				if playlistItem.author != "" {
-					code = machines.CodeAddAuthorShim(ts.GetCode(), playlistItem.author)
-				}
+
+				/*
+					-- Removes vbank 1, so nerfed for now!
+					if playlistItem.author != "" {
+						code = machines.CodeAddAuthorShim(code, playlistItem.author)
+					}
+				*/
 
 				ts := machines.MakeTicStateRunning(code)
 				(*j.comms) <- Msg{Type: "tic-state", TicState: ts}

@@ -29,6 +29,8 @@ Cross-compatible on Windows, Mac, and Linux.
 
 ## Runnning
 
+To get the latest version, visit the [https://github.com/creativenucleus/bytejammer](GitHub repo), click on the `Actions` tab, and then click on the title of the top workflow run. At the bottom of the next page, you'll find a panel called `Artifacts` that contain zip builds. There will be better way to package, and I'll figure it out! :)  
+
 Make sure you place it in a folder of its own. It will create a subfolder to hold some temporary files.
 
 (Swap `bytejammer.exe` for `bytejammer` on Linux/Mac. You may need to make the file executable with some chmod magic)
@@ -96,18 +98,20 @@ You can connect a client-jukebox to a remote server, as you would a regular clie
 
 ### TODO
 
-- Automatic snapshot on each code run.
-- Better gatekeeping of client 'lobby'.
 - Improve web panels.
+- Reintroduce NuSan Launcher.
+- Better gatekeeping of client 'lobby'.
 - TIC-80 version management
 - Authentication by key.
 - Clean close/open.
 - Messaging feature.
 - Obfuscate session
 - Rationalise capitalisation/skewer of AJAX/WS data.
+- Normalise filepath final slash throughout code (pick one!)
 
-### Ideas
+### Ideas / Later
 
+- LCDZ json builds. Add keyword tags?
 - Wrap WebSocket/Mutex in a class.
 - Pure proxy mode (to sit on a server and facilitate connections between clients without fixed ips).  
 - Multiple hosted ports per server?  
@@ -121,7 +125,7 @@ You can connect a client-jukebox to a remote server, as you would a regular clie
 - Act as a relay (hub), fan out one code to many, or converge / round robin to one display? (applications?)  
 - Is possible: Auto layout of OBS Studio, or a layer in between?  
 - Code posting to a web client via WebSocket?  
-- Support other fantasy consoles (Bazematic? MicroW8? Pico8?) / spec out.  
+- Support other fantasy consoles (Bonzomatic? Bazematic? MicroW8? Pico8?) / spec out.  
 
 ## Alternatives
 
