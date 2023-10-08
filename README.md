@@ -41,13 +41,14 @@ Default (no arguments) mode will launch into jukebox mode, playing random Byteja
 It can be provided with a JSON file playlist (from remote and local) or .zip file.  
 
 Applications:  
-    - To project onto a wall at parties to preach the good TIC and Bytejam words.  
-    - To play at events like the recent Unesco one.  
-    - For DJ visuals.  
-    - Run by a server as a placeholder player for Bytejams.  
-    - For people to just enjoy in their own homes.  
-    - An ad-hoc retro-style kiosk/ad runner.  
-    - For a party to showcase all the entries in a competition.  
+
+- To project onto a wall at parties to preach the good TIC and Bytejam words.  
+- To play at events like the recent Unesco one.  
+- For DJ visuals.  
+- Run by a server as a placeholder player for Bytejams.  
+- For people to just enjoy in their own homes.  
+- An ad-hoc retro-style kiosk/ad runner.  
+- For a party to showcase all the entries in a competition.  
 
 `bytejammer.exe` (default - Livecode DemoZoo ByteJam playlist)
 
@@ -64,8 +65,9 @@ Clients can be wired to display TICs, which will spawn as appropriate.
 The jukebox is also a client, just run by a robot.  
 The panel will allow the server operator to snapshot code, switch the links between clients and display TICs, and push code to clients.  
 If input+output can work on a client, also maybe useful for education:  
-    - The server can send some code to all clients  
-    - After an exercise, pull each in turn to display for showcase.  
+
+- The server can send some code to all clients  
+- After an exercise, pull each in turn to display for showcase.  
 
 `bytejammer.exe server` // (Optional: can specify `--localport 4444`)
 
@@ -151,6 +153,6 @@ This project operates with the following sub-licenses:
 
 ## Links and References
 
-[Listing / DemoZoo](https://demozoo.org/productions/330626/)
-[Listing / Pouët](https://pouet.net/prod.php?which=95232)
-[Overview Video / YouTube](https://youtube.com/watch?v=erhyvrGxwZY)
+- [Listing / DemoZoo](https://demozoo.org/productions/330626/)  
+- [Listing / Pouët](https://pouet.net/prod.php?which=95232)  
+- [Overview Video / YouTube](https://youtube.com/watch?v=erhyvrGxwZY)  
