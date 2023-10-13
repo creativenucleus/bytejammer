@@ -16,6 +16,8 @@ import (
 	"github.com/tyler-sommer/stick"
 )
 
+const statusSendPeriod = 5 * time.Second
+
 // HostPanel is the web interface for the host to manage their system, and the port should be private to them.
 // It handles the startup of a server (potentially multiple)
 // It does not handle the connections to the clients directly.
@@ -23,14 +25,14 @@ import (
 type HostPanel struct {
 	wsOperator   *websocket.Conn
 	wsMutex      sync.Mutex
-	server       *Server
+	session      *JamSession
 	chLog        chan string
 	statusTicker *time.Ticker
 }
 
 func startHostPanel(port int) error {
 	// #TODO: replace
-	session := "session"
+	hostSession := "session"
 
 	webServer := &http.Server{
 		Addr:              fmt.Sprintf(":%d", port),
@@ -44,17 +46,17 @@ func startHostPanel(port int) error {
 		http.ServeFile(w, r, "/web-static/favicon/favicon.ico")
 	})
 
-	fmt.Printf("In a web browser, go to http://localhost:%d/%s/operator\n", port, session)
+	fmt.Printf("In a web browser, go to http://localhost:%d/%s/operator\n", port, hostSession)
 
 	hp := HostPanel{
 		chLog: make(chan string),
 	}
 
 	http.HandleFunc("/", hp.webIndex)
-	http.HandleFunc(fmt.Sprintf("/%s/operator", session), hp.webOperator)
-	http.HandleFunc(fmt.Sprintf("/%s/ws-operator", session), hp.wsWebOperator())
-	http.HandleFunc(fmt.Sprintf("/%s/api/server.json", session), hp.webApiServer)
-	http.HandleFunc(fmt.Sprintf("/%s/api/machine.json", session), hp.webApiMachine)
+	http.HandleFunc(fmt.Sprintf("/%s/operator", hostSession), hp.webOperator)
+	http.HandleFunc(fmt.Sprintf("/%s/ws-operator", hostSession), hp.wsWebOperator())
+	http.HandleFunc(fmt.Sprintf("/%s/api/server.json", hostSession), hp.webApiServer)
+	http.HandleFunc(fmt.Sprintf("/%s/api/machine.json", hostSession), hp.webApiMachine)
 	if err := webServer.ListenAndServe(); err != nil {
 		return err
 	}
@@ -170,12 +172,12 @@ func (hp *HostPanel) webApiServer(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// #TODO: This is not great - return some detail
-		if hp.server != nil {
+		if hp.session != nil {
 			apiOutErr(w, err, http.StatusBadRequest)
 			return
 		}
 
-		hp.server, err = startServer(req.SessionName, port, nil, hp.chLog)
+		hp.session, err = startJamSession(port, req.SessionName, hp.chLog)
 		if err != nil {
 			hp.chLog <- fmt.Sprintf("Server failed to launch: %s", err)
 			apiOutErr(w, err, http.StatusInternalServerError)
@@ -209,20 +211,20 @@ func (hp *HostPanel) webApiMachine(w http.ResponseWriter, r *http.Request) {
 
 		switch req.Mode {
 		case "unassigned":
-			_, err := hp.server.startMachine()
+			_, err := hp.session.startMachine()
 			if err != nil {
 				apiOutErr(w, fmt.Errorf("TIC-80 Launch (unassigned): %w", err), http.StatusBadRequest)
 				return
 			}
 
 		case "jammer":
-			clientUuid, err := uuid.Parse(req.ClientUuid)
+			connUuid, err := uuid.Parse(req.ClientUuid)
 			if err != nil {
 				apiOutErr(w, fmt.Errorf("TIC-80 Launch (jammer): %w", err), http.StatusBadRequest)
 				return
 			}
 
-			_, err = hp.server.startMachineForClient(clientUuid)
+			_, err = hp.session.startMachineForConn(connUuid)
 			if err != nil {
 				apiOutErr(w, fmt.Errorf("TIC-80 Launch (jammer): %w", err), http.StatusBadRequest)
 				return
@@ -255,59 +257,59 @@ func (hp *HostPanel) webApiMachine(w http.ResponseWriter, r *http.Request) {
 	}
 }
 func (hp *HostPanel) handleStopServer() {
-	if hp.server == nil {
+	if hp.session == nil {
 		hp.chLog <- "Requested server stop, but no server is running"
 		return
 	}
 
-	hp.server.stop()
+	hp.session.stop()
 	hp.sendServerStatus(true)
 }
 
 func (hp *HostPanel) handleResetAllClients() {
-	if hp.server == nil {
+	if hp.session == nil {
 		hp.chLog <- "Requested reset all clients, but no server is running"
 		return
 	}
 
-	hp.server.resetAllClients()
+	hp.session.resetAllClients()
 	hp.sendServerStatus(true)
 }
 
 func (hp *HostPanel) handleConnectMachineClient(data DataConnectMachineClient) {
-	if hp.server == nil {
+	if hp.session == nil {
 		hp.chLog <- "Requested connect, but no server is running"
 		return
 	}
 
-	hp.server.connectMachineClient(data)
+	hp.session.connectMachineClient(data)
 	hp.sendServerStatus(true)
 }
 
 func (hp *HostPanel) handleDisconnectMachineClient(data DataDisconnectMachineClient) {
-	if hp.server == nil {
+	if hp.session == nil {
 		hp.chLog <- "Requested disconnect, but no server is running"
 		return
 	}
 
-	hp.server.disconnectMachineClient(data)
+	hp.session.disconnectMachineClient(data)
 	hp.sendServerStatus(true)
 }
 
 func (hp *HostPanel) handleCloseMachine(data DataCloseMachine) {
-	if hp.server == nil {
+	if hp.session == nil {
 		hp.chLog <- "Requested close machine, but no server is running"
 		return
 	}
 
-	hp.server.closeMachine(data)
+	hp.session.closeMachine(data)
 	hp.sendServerStatus(true)
 }
 
 // #TODO: resetTicker could be improved - we should set that true if the code requests a status send
 func (hp *HostPanel) sendServerStatus(resetTicker bool) {
 	// #TODO: This is not great - should be driven by the server tick?
-	if hp.server == nil {
+	if hp.session == nil {
 		return
 	}
 
@@ -315,7 +317,7 @@ func (hp *HostPanel) sendServerStatus(resetTicker bool) {
 		hp.statusTicker.Reset(statusSendPeriod)
 	}
 
-	status := hp.server.getStatus()
+	status := hp.session.getStatus()
 	err := hp.sendData(&status)
 	if err != nil {
 		log.Println("read:", err)
@@ -323,8 +325,8 @@ func (hp *HostPanel) sendServerStatus(resetTicker bool) {
 }
 
 func (hp *HostPanel) sendLog(message string) {
-	msg := MsgLog{Type: "log"}
-	msg.Data.Msg = message
+	msg := Msg{Type: "log", Log: DataLog{Msg: message}}
+	fmt.Printf("-> HOST PANEL: %s\n", message)
 
 	err := hp.sendData(&msg)
 	if err != nil {

@@ -9,7 +9,7 @@ func startClientJukebox(host string, port int, playlist *Playlist) error {
 		return err
 	}
 
-	ws, err := NewWebSocketClient(host, port)
+	ws, err := NewWebSocketLink(host, port, "/ws-bytejam")
 	if err != nil {
 		return err
 	}
@@ -22,7 +22,9 @@ func startClientJukebox(host string, port int, playlist *Playlist) error {
 				if ok {
 					switch msg.Type {
 					case "tic-state":
-						err := ws.sendCode(msg.TicState)
+						// #TODO: line endings for data? UTF-8?
+						msg := Msg{Type: "tic-state", TicState: msg.TicState}
+						err = ws.sendData(msg)
 						if err != nil {
 							// #TODO: soften!
 							log.Fatal(err)

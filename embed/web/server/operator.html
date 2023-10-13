@@ -85,7 +85,7 @@
                     for (const client of data.Clients) {
                         const rowClass = client.Status == "waiting" ? "table-warning" : "table-success";
                         html += `<tr class="${rowClass}">`;
-                        html += `<td>${client.DisplayName}</td>`;
+                        html += `<td>${client.DisplayName} ${client.ShortUuid}</td>`;
                         html += `<td>${client.Status}</td>`;
                         html += `<td>${client.LastPingTime}</td>`;
                         html += `<td>`

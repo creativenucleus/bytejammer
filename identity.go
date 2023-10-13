@@ -12,6 +12,7 @@ import (
 )
 
 type Identity struct {
+	Uuid        uuid.UUID      `json:"uuid"`
 	DisplayName string         `json:"displayName"`
 	Crypto      *CryptoPrivate `json:"crypto"`
 }
@@ -19,8 +20,6 @@ type Identity struct {
 // For storage?: hex.EncodeString, hex.DecodeString
 
 func makeIdentity(displayName string) error {
-	uuid := uuid.New()
-
 	basepath := filepath.Clean(fmt.Sprintf("%sclient-data/identity", config.WORK_DIR))
 	err := util.EnsurePathExists(basepath, os.ModePerm)
 	if err != nil {
@@ -33,6 +32,7 @@ func makeIdentity(displayName string) error {
 	}
 
 	identity := Identity{
+		Uuid:        uuid.New(),
 		DisplayName: displayName,
 		Crypto:      c,
 	}
@@ -42,7 +42,7 @@ func makeIdentity(displayName string) error {
 		return err
 	}
 
-	filepath := filepath.Clean(fmt.Sprintf("%s/identity-%s.json", basepath, uuid.String()))
+	filepath := filepath.Clean(fmt.Sprintf("%s/identity-%s.json", basepath, identity.Uuid.String()))
 
 	return os.WriteFile(filepath, data, 0644)
 }

@@ -5,12 +5,33 @@ import (
 	"log"
 	"net/url"
 	"sync"
+	"time"
 
-	"github.com/creativenucleus/bytejammer/machines"
 	"github.com/gorilla/websocket"
 )
 
-type SenderWebSocket struct {
+var (
+	wsUpgrader = websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+	}
+)
+
+// #TODO
+/*
+const (
+	// Time allowed to write the file to the client.
+	writeWait = 10 * time.Second
+
+	// Time allowed to read the next pong message from the client.
+	pongWait = 60 * time.Second
+
+	// Send pings to client with this period. Must be less than pongWait.
+	pingPeriod = (pongWait * 9) / 10
+)
+*/
+
+type WebSocketLink struct {
 	conn    *websocket.Conn
 	wsMutex sync.Mutex
 }
@@ -18,16 +39,15 @@ type SenderWebSocket struct {
 // Ensure you:
 //
 //	defer sender.Close()
-func NewWebSocketClient(host string, port int) (*SenderWebSocket, error) {
+func NewWebSocketLink(host string, port int, path string) (*WebSocketLink, error) {
 	u := url.URL{
 		Scheme: "ws",
 		Host:   fmt.Sprintf("%s:%d", host, port),
-		Path:   "/ws-bytejam",
-		//		User:   userInfo,
+		Path:   path,
 	}
 	log.Printf("-> Connecting to %s", u.String())
 
-	s := SenderWebSocket{}
+	s := WebSocketLink{}
 	var err error
 	s.conn, _, err = websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
@@ -37,33 +57,24 @@ func NewWebSocketClient(host string, port int) (*SenderWebSocket, error) {
 	return &s, nil
 }
 
-func (s *SenderWebSocket) Close() {
-	s.conn.Close()
-}
-
-func (s *SenderWebSocket) sendCode(ts machines.TicState) error {
-	// #TODO: line endings for data? UTF-8?
-	msg := Msg{Type: "tic-state", TicState: ts}
-	return s.sendData(&msg)
-}
-
-func (s *SenderWebSocket) sendIdentity(identity *Identity) error {
-	publicKeyRaw, err := identity.Crypto.publicKeyToRaw()
+func (s *WebSocketLink) Close() error {
+	msg := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")
+	err := s.sendControlSignal(websocket.CloseMessage, msg, time.Second)
 	if err != nil {
-		return err
+		// #TODO: log - though I don't know if we should still try close?
 	}
 
-	msg := Msg{
-		Type: "identity",
-		Identity: DataIdentity{
-			DisplayName: identity.DisplayName,
-			PublicKey:   publicKeyRaw,
-		},
-	}
-	return s.sendData(&msg)
+	return s.conn.Close()
 }
 
-func (s *SenderWebSocket) sendData(data interface{}) error {
+func (s *WebSocketLink) sendControlSignal(messageType int, data []byte, byDuration time.Duration) error {
+	s.wsMutex.Lock()
+	defer s.wsMutex.Unlock()
+
+	return s.conn.WriteControl(websocket.CloseMessage, data, time.Now().Add(byDuration))
+}
+
+func (s *WebSocketLink) sendData(data interface{}) error {
 	s.wsMutex.Lock()
 	defer s.wsMutex.Unlock()
 	return s.conn.WriteJSON(data)

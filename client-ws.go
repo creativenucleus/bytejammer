@@ -13,7 +13,7 @@ import (
 )
 
 type ClientWS struct {
-	ws       *SenderWebSocket
+	ws       *WebSocketLink
 	chMsg    chan Msg
 	basepath string
 }
@@ -67,8 +67,8 @@ func startClientServerConn(host string, port int, identity *Identity, chServerSt
 	}
 }
 
-func clientOpenConnection(host string, port int) (*SenderWebSocket, error) {
-	ws, err := NewWebSocketClient(host, port)
+func clientOpenConnection(host string, port int) (*WebSocketLink, error) {
+	ws, err := NewWebSocketLink(host, port, "/ws-bytejam")
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,21 @@ func (cws *ClientWS) handleChallengeRequest(challenge string) {
 
 // #TODO: fatalErr
 func (cws *ClientWS) clientWsWriter(tic *machines.Tic, identity *Identity) {
-	err := cws.ws.sendIdentity(identity)
+	// Send Identity...
+	publicKeyRaw, err := identity.Crypto.publicKeyToRaw()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	msg := Msg{
+		Type: "identity",
+		Identity: DataIdentity{
+			Uuid:        identity.Uuid.String(),
+			DisplayName: identity.DisplayName,
+			PublicKey:   publicKeyRaw,
+		},
+	}
+	err = cws.ws.sendData(&msg)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -145,7 +159,9 @@ func (cws *ClientWS) clientWsWriter(tic *machines.Tic, identity *Identity) {
 				}
 			}
 
-			err = cws.ws.sendCode(*ticState)
+			// #TODO: line endings for data? UTF-8?
+			msg := Msg{Type: "tic-state", TicState: *ticState}
+			err = cws.ws.sendData(msg)
 			if err != nil {
 				log.Fatal(err)
 				break
