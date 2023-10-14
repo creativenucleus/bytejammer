@@ -17,7 +17,7 @@ Features should currently be considered experimental, and liable to change, poss
 
 ## Larger Known Issues
 
-Microsoft Windows Defender currently flags this program as a Trojan (`Bearfoos.A!ml`) when run in server mode. I believe this is a false positive - there are quite a few examples of [other people complaining around this on the web](https://www.google.com/search?q="Bearfoos.A!ml"). I'll see if I can get it unflagged. You're welcome to check the source code and build it yourself (if you want total peace of mind, you'll also need to rebuild the TIC-80 binary and replace that in the `embed` folder).
+Microsoft Windows Defender currently flags this program as a Trojan (`Bearfoos.A!ml`) when run in server mode. I believe this is a false positive - there are quite a few examples of [other people complaining around this on the web](https://www.google.com/search?q="Bearfoos.A!ml") and it seems to be [just Windows Defender](https://www.virustotal.com/gui/file/a479a1edb273dafec1920fb7210863d48ce9bd2a0f394ad5ff1cd0478468a18c?nocache=1). I'll see if I can get it unflagged. You're welcome to check the source code and build it yourself (if you want total peace of mind, you'll also need to rebuild the TIC-80 binary and replace that in the `embed` folder).
 
 Some files that are meant to be temporary don't get removed.
 
