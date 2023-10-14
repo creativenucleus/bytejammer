@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
 	"strconv"
@@ -39,12 +40,11 @@ func startHostPanel(port int) error {
 		ReadHeaderTimeout: 3 * time.Second,
 	}
 
-	fs := http.FileServer(http.Dir("./web-static"))
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
-
-	http.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "/web-static/favicon/favicon.ico")
-	})
+	subFs, err := fs.Sub(embed.WebStaticAssets, "web-static")
+	if err != nil {
+		return err
+	}
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(subFs))))
 
 	fmt.Printf("In a web browser, go to http://localhost:%d/%s/operator\n", port, hostSession)
 
@@ -113,8 +113,8 @@ func (hp *HostPanel) wsOperatorRead() {
 		}
 
 		switch msg.Type {
-		case "reset-clients":
-			hp.handleResetAllClients()
+		case "identify-machines":
+			hp.handleIdentifyMachines()
 		case "connect-machine-client":
 			hp.handleConnectMachineClient(msg.ConnectMachineClient)
 		case "disconnect-machine-client":
@@ -173,7 +173,7 @@ func (hp *HostPanel) webApiServer(w http.ResponseWriter, r *http.Request) {
 
 		// #TODO: This is not great - return some detail
 		if hp.session != nil {
-			apiOutErr(w, err, http.StatusBadRequest)
+			apiOutErr(w, errors.New("Server already running"), http.StatusBadRequest)
 			return
 		}
 
@@ -217,6 +217,8 @@ func (hp *HostPanel) webApiMachine(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
+			hp.sendLog("TIC-80 Launched (unassigned)")
+
 		case "jammer":
 			connUuid, err := uuid.Parse(req.ClientUuid)
 			if err != nil {
@@ -229,6 +231,8 @@ func (hp *HostPanel) webApiMachine(w http.ResponseWriter, r *http.Request) {
 				apiOutErr(w, fmt.Errorf("TIC-80 Launch (jammer): %w", err), http.StatusBadRequest)
 				return
 			}
+
+			hp.sendLog("TIC-80 Launched for (jammer)")
 
 		case "jukebox":
 			playlist, err := readPlaylist("")
@@ -266,13 +270,13 @@ func (hp *HostPanel) handleStopServer() {
 	hp.sendServerStatus(true)
 }
 
-func (hp *HostPanel) handleResetAllClients() {
+func (hp *HostPanel) handleIdentifyMachines() {
 	if hp.session == nil {
-		hp.chLog <- "Requested reset all clients, but no server is running"
+		hp.chLog <- "Requested identify machines, but no server is running"
 		return
 	}
 
-	hp.session.resetAllClients()
+	hp.session.identifyMachines()
 	hp.sendServerStatus(true)
 }
 

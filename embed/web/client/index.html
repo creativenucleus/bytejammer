@@ -10,7 +10,7 @@
 
         <link href="/static/package/bootstrap-5.3.2-dist/css/bootstrap.min.css" rel="stylesheet">
         <link rel="stylesheet" href="/static/style/default.css" />
-        <link rel="icon" href="/static/media/favicon/favicon.ico">
+        <link rel="icon" type="image/x-icon" href="/static/media/favicon/favicon.ico">
         <script src="/static/javascript/bytejammer.js"></script>    
 
         <script>
@@ -36,8 +36,11 @@
 
             const fetchIdentites = async () => {
                 // #TODO: catch errors
-                IDENTITIES = await ajax.makeReq("GET", "identity");
-                refreshViewIdentities();
+                const res = await ajax.makeReq("GET", "identity");
+                if (res.ok) {
+                    IDENTITIES = res.data;
+                    refreshViewIdentities();
+                }
             }
 
             window.onload = () => {
@@ -59,7 +62,6 @@
                     e.target.reset();
                     (async() => {
                         const res = await ajax.makeReq("POST", "join-server", data)
-
                         fetchIdentites();
                     })();
                 });
@@ -83,7 +85,7 @@
                     setWsLocalStatusText('ok', "Initialised");
 
                     conn.onerror = (error) => {
-                        alert(`[error]`);
+                        addToLog("Local websocket connection error");
                     }
 
                     conn.onopen = () => {
@@ -91,14 +93,14 @@
                         setWsLocalStatusText('ok', "Open")
                     }
                     
-                    conn.onclose = (evt) => {
+                    conn.onclose = (event) => {
                         addToLog("Disconnected from local");
                         if (event.wasClean) {
                             setWsLocalStatusText('ok', `Closed: Connection closed cleanly, code=${event.code} reason=${event.reason}`);
                         } else {
                             // e.g. server process killed or network down
                             // event.code is usually 1006 in this case
-                            setWsLocalStatusText('error', 'Closed: Connection died');
+                            setWsLocalStatusText('error', "Closed: Unexpected disconnect");
                         }
                     };
 
@@ -221,7 +223,7 @@
             </div>
 
             <div class="fixed-bottom">
-                <div class="container">
+                <div class="container" id="connection-status-panel">
                     <div>Connection to Local: <span id="ws-local-status" class="fw-bold">(none)</span></div>
                     <div>Connection to Remote: <span id="ws-remote-status" class="fw-bold">(none)</span></div>
                 </div>

@@ -245,7 +245,7 @@ func (js *JamSession) startMachineForConn(connUuid uuid.UUID) (*machines.Machine
 	return m, err
 }
 
-func (js *JamSession) resetAllClients() {
+func (js *JamSession) identifyMachines() {
 	count := 0
 	for _, c := range js.manager.conns {
 		m := js.manager.getMachineForConn(c)
@@ -258,7 +258,7 @@ func (js *JamSession) resetAllClients() {
 			count++
 		}
 	}
-	js.chLog <- fmt.Sprintf("Reset %d clients", count)
+	js.chLog <- fmt.Sprintf("Identification sent to %d machines for 30 seconds", count)
 }
 
 func (js *JamSession) closeMachine(data DataCloseMachine) {

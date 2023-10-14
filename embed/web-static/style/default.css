@@ -18,3 +18,7 @@ html {
     height: 8em;
     overflow: scroll;
 }
+
+#connection-status-panel {
+    background: white;
+}

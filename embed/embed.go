@@ -1,6 +1,7 @@
 package embed
 
 import (
+	"embed"
 	_ "embed"
 )
 
@@ -12,6 +13,9 @@ var ServerIndexHtml []byte
 
 //go:embed web/client/index.html
 var ClientIndexHtml []byte
+
+//go:embed web-static
+var WebStaticAssets embed.FS
 
 //go:embed tic-code/jukebox.lua
 var LuaJukebox []byte

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
 	"strconv"
@@ -40,12 +41,11 @@ func startClientPanel(port int) error {
 		ReadHeaderTimeout: 3 * time.Second,
 	}
 
-	fs := http.FileServer(http.Dir("./web-static"))
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
-
-	http.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "/web-static/favicon/favicon.ico")
-	})
+	subFs, err := fs.Sub(embed.WebStaticAssets, "web-static")
+	if err != nil {
+		return err
+	}
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(subFs))))
 
 	fmt.Printf("In a web browser, go to http://localhost:%d/%s\n", port, session)
 

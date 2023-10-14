@@ -79,6 +79,15 @@ func (jc *JamSessionConn) runServerWsConnRead(js *JamSession) {
 			// See whether the identity / public key matches our known one
 			// #TODO: something
 
+			// #TODO: Refactor this placeholder!
+			// Kick an existing connection off if it has the same identity
+			for _, c := range js.manager.conns {
+				if c != jc && c.identity != nil && c.identity.uuid.String() == jc.identity.uuid.String() {
+					c.signalKick <- true
+					js.manager.unregisterConn(c)
+				}
+			}
+
 			// Send the challenge
 			msg := Msg{Type: "challenge-request", ChallengeRequest: DataChallengeRequest{Challenge: "This will be a random string!"}}
 			err = jc.sendData(msg)
@@ -111,9 +120,12 @@ func (jc *JamSessionConn) runServerWsConnRead(js *JamSession) {
 			machine := js.manager.getMachineForConn(jc)
 			if machine != nil && machine.Tic != nil {
 				// Output to Tic
-				if jc.identity.displayName != "" {
-					ts.SetCode(machines.CodeAddAuthorShim(ts.GetCode(), jc.identity.displayName))
-				}
+				// Don't shim for now...
+				/*
+					if jc.identity.displayName != "" {
+						ts.SetCode(machines.CodeAddAuthorShim(ts.GetCode(), jc.identity.displayName))
+					}
+				*/
 
 				err = machine.Tic.WriteImportCode(ts)
 				if err != nil {

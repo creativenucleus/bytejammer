@@ -65,20 +65,38 @@ class BjmrAjax {
     }
 
     makeReq = async(method, endpoint, data) => {
-        // Making our request
-        const response = await fetch(`/${this.sessionKey}/api/${endpoint}.json`, {
-            method: method,
-    //                    mode: "cors", // no-cors, *cors, same-origin
-            cache: "no-cache", // *default, no-cache, reload, force-cache, only-if-cached
-    //                    credentials: "same-origin", // include, *same-origin, omit
-            headers: {
-                "Content-Type": "application/json",
-            },
-    //                    redirect: "follow", // manual, *follow, error
-    //                    referrerPolicy: "no-referrer", // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
-            body: JSON.stringify(data), // body data type must match "Content-Type" header
-        });
-        return await response.json();
+        const out = {
+            ok: false,
+            code: null,
+            data: null,
+        }
+
+        try {
+            const response = await fetch(`/${this.sessionKey}/api/${endpoint}.json`, {
+                method: method,
+                // mode: "cors", // no-cors, *cors, same-origin
+                cache: "no-cache", // *default, no-cache, reload, force-cache, only-if-cached
+            // credentials: "same-origin", // include, *same-origin, omit
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            // redirect: "follow", // manual, *follow, error
+            // referrerPolicy: "no-referrer", // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
+                body: JSON.stringify(data), // body data type must match "Content-Type" header
+            });
+
+            out.code = response.status;
+            out.data = await response.json();
+        } catch (error) {
+            console.error("There has been a problem with your fetch operation:", error);
+        }
+
+        out.ok = (out.code >= 200 && out.code <= 299)
+        if (!out.ok) {
+            addToLog(`ERROR ${out.code}: ${out.data?.error}`);
+        }
+
+        return out;
     }
 }
 
