@@ -17,6 +17,8 @@ Features should currently be considered experimental, and liable to change, poss
 
 ## Larger Known Issues
 
+Microsoft Windows Defender currently flags this program as a Trojan (`Bearfoos.A!ml`) when run in server mode. I believe this is a false positive - there are quite a few examples of [other people complaining around this on the web](https://www.google.com/search?q="Bearfoos.A!ml"). I'll see if I can get it unflagged. You're welcome to check the source code and build it yourself (if you want total peace of mind, you'll also need to rebuild the TIC-80 binary and replace that in the `embed` folder).
+
 Some files that are meant to be temporary don't get removed.
 
 The Identity mechanism is incomplete. It's likely that this will be updated.
@@ -27,9 +29,9 @@ This is intended as a standalone TIC-80 launcher that can be used to coordinate 
 
 Cross-compatible on Windows, Mac, and Linux.
 
-## Runnning
+## Running
 
-To get the latest version, visit the [GitHub repo](https://github.com/creativenucleus/bytejammer), click on the `Actions` tab, and then click on the title of the top workflow run. At the bottom of the next page, you'll find a panel called `Artifacts` that contain zip builds. There will be better way to package, and I'll figure it out! :)  
+To get the latest version, visit the [GitHub repo latest releases page](https://github.com/creativenucleus/bytejammer/releases/).
 
 Make sure you place it in a folder of its own. It will create a subfolder to hold some temporary files.
 
