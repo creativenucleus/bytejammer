@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"os"
 	"sync"
@@ -31,6 +32,7 @@ type JamSessionConnIdentity struct {
 	displayName string
 	publicKey   []byte
 	isConfirmed bool
+	challenge   []byte
 }
 
 func NewJamSessionConnection(conn *websocket.Conn) *JamSessionConn {
@@ -74,6 +76,7 @@ func (jc *JamSessionConn) runServerWsConnRead(js *JamSession) {
 				displayName: msg.Identity.DisplayName,
 				publicKey:   msg.Identity.PublicKey,
 				isConfirmed: false,
+				challenge:   util.GetRandomBytes(32),
 			}
 
 			// See whether the identity / public key matches our known one
@@ -89,18 +92,41 @@ func (jc *JamSessionConn) runServerWsConnRead(js *JamSession) {
 			}
 
 			// Send the challenge
-			msg := Msg{Type: "challenge-request", ChallengeRequest: DataChallengeRequest{Challenge: "This will be a random string!"}}
+			msg := Msg{Type: "challenge-request", ChallengeRequest: DataChallengeRequest{Challenge: fmt.Sprintf("%x", jc.identity.challenge)}}
 			err = jc.sendData(msg)
 			if err != nil {
 				js.chLog <- fmt.Sprintln("write:", err)
 			}
 
 		case "challenge-response":
+			signed, err := hex.DecodeString(msg.ChallengeResponse.Challenge)
+			if err != nil {
+				js.chLog <- fmt.Sprintln("write:", err)
+				return
+			}
+
+			cryptoPub, err := newCryptoPublicFromPem(jc.identity.publicKey)
+			if err != nil {
+				js.chLog <- fmt.Sprintln("write:", err)
+				return
+			}
+
+			isValid := cryptoPub.verifySigned(jc.identity.challenge, signed)
+			if err != nil {
+				js.chLog <- fmt.Sprintln("write:", err)
+				return
+			}
+
+			if !isValid {
+				js.chLog <- fmt.Sprintln("IS NOT VALID")
+				return
+			}
+
 			// #TODO: Match identity to any existing (fallen) clients, and stitch together
 			// Do two live clients match identity uuid?! What now?
 			// Check public key matches known one
 
-			fmt.Println(msg.ChallengeResponse.Challenge)
+			js.chLog <- fmt.Sprintln("IS VALID!")
 
 		case "tic-state":
 			ts := msg.TicState
@@ -150,8 +176,6 @@ func (jc *JamSessionConn) runServerWsConnWrite(js *JamSession) {
 
 // TODO: Handle error
 func (js *JamSessionConn) sendMachineNameCode(machineName string) error {
-	fmt.Printf("CLIENT RESET: %d\n", js.connUuid)
-
 	ts := machines.MakeTicStateRunning(embed.LuaClient)
 	code := machines.CodeReplace(ts.GetCode(), map[string]string{
 		"CLIENT_ID":    machineName,

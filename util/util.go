@@ -1,6 +1,7 @@
 package util
 
 import (
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -38,5 +39,11 @@ func GetSlug(in string) string {
 }
 
 func GetSlugFromTime(t time.Time) string {
-	return fmt.Sprintf(t.Format("2006-01-02_15-04-05"))
+	return fmt.Sprintf(t.Format("20060102_1504"))
+}
+
+func GetRandomBytes(length int) []byte {
+	b := make([]byte, length)
+	rand.Read(b)
+	return b
 }
