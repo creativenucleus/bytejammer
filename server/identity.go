@@ -8,14 +8,15 @@ import (
 	"time"
 
 	"github.com/creativenucleus/bytejammer/config"
+	"github.com/creativenucleus/bytejammer/crypto"
 	"github.com/google/uuid"
 )
 
 type JammerIdentity struct {
-	Uuid         uuid.UUID     `json:"uuid"`
-	DisplayName  string        `json:"displayName"`
-	CryptoPublic *CryptoPublic `json:"cryptoPublic"`
-	CreatedAt    time.Time     `json:"createdAt"`
+	Uuid         uuid.UUID            `json:"uuid"`
+	DisplayName  string               `json:"displayName"`
+	CryptoPublic *crypto.CryptoPublic `json:"cryptoPublic"`
+	CreatedAt    time.Time            `json:"createdAt"`
 }
 
 type Identities struct {

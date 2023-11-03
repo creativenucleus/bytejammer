@@ -108,7 +108,7 @@ func (cws *ClientWS) handleChallengeRequest(challenge string, identity *Identity
 	}
 
 	fmt.Printf("%x", data)
-	signed, err := identity.Crypto.sign(data)
+	signed, err := identity.Crypto.Sign(data)
 	if err != nil {
 		return err
 	}
@@ -121,7 +121,7 @@ func (cws *ClientWS) handleChallengeRequest(challenge string, identity *Identity
 // #TODO: fatalErr
 func (cws *ClientWS) clientWsWriter(tic *machines.Tic, identity *Identity) {
 	// Send Identity...
-	publicKeyRaw, err := identity.Crypto.publicKeyToPem()
+	publicKeyRaw, err := identity.Crypto.PublicKeyToPem()
 	if err != nil {
 		log.Fatal(err)
 	}

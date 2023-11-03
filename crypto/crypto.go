@@ -1,4 +1,4 @@
-package main
+package crypto
 
 import (
 	"crypto"
@@ -16,9 +16,13 @@ type CryptoPrivate struct {
 	privateKey *rsa.PrivateKey
 }
 
+type CryptoPublic struct {
+	publicKey *rsa.PublicKey
+}
+
 // https://betterprogramming.pub/exploring-cryptography-in-go-signing-vs-encryption-f19534334ad
 // Returns public key, private key, error
-func newCryptoPrivate() (*CryptoPrivate, error) {
+func NewCryptoPrivate() (*CryptoPrivate, error) {
 	c := CryptoPrivate{}
 
 	var err error
@@ -54,7 +58,7 @@ func (c CryptoPrivate) privateKeyToPem() []byte {
 	return pem.EncodeToMemory(&privBlock)
 }
 
-func (c CryptoPrivate) publicKeyToPem() ([]byte, error) {
+func (c CryptoPrivate) PublicKeyToPem() ([]byte, error) {
 	data, err := x509.MarshalPKIXPublicKey(c.privateKey.Public())
 	if err != nil {
 		return nil, err
@@ -108,15 +112,11 @@ func hashData(data []byte) []byte {
 }
 
 // Make a hash of the data, then sign it
-func (c CryptoPrivate) sign(data []byte) ([]byte, error) {
+func (c CryptoPrivate) Sign(data []byte) ([]byte, error) {
 	return rsa.SignPSS(rand.Reader, c.privateKey, crypto.SHA256, hashData(data), nil)
 }
 
-type CryptoPublic struct {
-	publicKey *rsa.PublicKey
-}
-
-func newCryptoPublicFromPem(pemData []byte) (*CryptoPublic, error) {
+func NewCryptoPublicFromPem(pemData []byte) (*CryptoPublic, error) {
 	c := CryptoPublic{}
 
 	block, _ := pem.Decode(pemData)
@@ -143,7 +143,7 @@ func newCryptoPublicFromPem(pemData []byte) (*CryptoPublic, error) {
 	return &c, nil
 }
 
-func (c CryptoPublic) verifySigned(data []byte, signature []byte) bool {
+func (c CryptoPublic) VerifySigned(data []byte, signature []byte) bool {
 	err := rsa.VerifyPSS(c.publicKey, crypto.SHA256, hashData(data), signature, nil)
 	return err == nil
 }

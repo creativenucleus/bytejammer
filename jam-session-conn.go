@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/creativenucleus/bytejammer/crypto"
 	"github.com/creativenucleus/bytejammer/embed"
 	"github.com/creativenucleus/bytejammer/machines"
 	"github.com/creativenucleus/bytejammer/util"
@@ -105,13 +106,13 @@ func (jc *JamSessionConn) runServerWsConnRead(js *JamSession) {
 				return
 			}
 
-			cryptoPub, err := newCryptoPublicFromPem(jc.identity.publicKey)
+			cryptoPub, err := crypto.NewCryptoPublicFromPem(jc.identity.publicKey)
 			if err != nil {
 				js.chLog <- fmt.Sprintln("write:", err)
 				return
 			}
 
-			isValid := cryptoPub.verifySigned(jc.identity.challenge, signed)
+			isValid := cryptoPub.VerifySigned(jc.identity.challenge, signed)
 			if err != nil {
 				js.chLog <- fmt.Sprintln("write:", err)
 				return
