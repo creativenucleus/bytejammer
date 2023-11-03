@@ -7,7 +7,17 @@ import (
 
 func apiOutErr(w http.ResponseWriter, err error, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
-	http.Error(w, err.Error(), statusCode)
+	w.WriteHeader(statusCode)
+
+	type errJson struct {
+		Error string `json:"error"`
+	}
+
+	out := errJson{
+		Error: err.Error(),
+	}
+
+	json.NewEncoder(w).Encode(out)
 }
 
 func apiOutResponse(w http.ResponseWriter, data interface{}, statusCode int) {

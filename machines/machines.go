@@ -39,7 +39,7 @@ func LaunchMachine(platform string, hasImport bool, hasExport bool, isServer boo
 	var err error
 	switch m.Platform {
 	case "TIC-80":
-		slug := fmt.Sprint(rand.Intn(10000))
+		slug := fmt.Sprint(rand.Intn(100000000))
 		m.Tic, err = newTic(slug, hasImport, hasExport, isServer)
 		if err != nil {
 			return nil, err

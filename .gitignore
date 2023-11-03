@@ -1,5 +1,5 @@
+/_bytejammer-data/*
 /external/*
-/work/*
 /*.exe
 /*.exe~
 bytejammer.code-workspace

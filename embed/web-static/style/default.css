@@ -1,0 +1,24 @@
+html {
+    /* background-color: #d3f5ff;
+    overflow: hidden;
+    */
+}
+
+#ws-local-status {
+    font-weight: bold;
+}
+
+#ws-remote-status {
+    font-weight: bold;    
+}
+
+#log {
+    background: white;
+    font-family: monospace;
+    height: 8em;
+    overflow: scroll;
+}
+
+#connection-status-panel {
+    background: white;
+}

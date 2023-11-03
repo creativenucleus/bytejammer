@@ -1,6 +1,12 @@
 package server
 
-func GetFunName(id int) string {
+import (
+	"math/rand"
+)
+
+var machineNameRand = rand.Int()
+
+func GetFunName(index int) string {
 	var names = [...]string{
 		"Sunseed Berry",
 		"Face Wrinkler",
@@ -37,5 +43,6 @@ func GetFunName(id int) string {
 		"Tremendous Sniffer",
 	}
 
-	return names[id%len(names)]
+	nameIndex := (machineNameRand + index) % len(names)
+	return names[nameIndex]
 }

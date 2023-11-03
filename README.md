@@ -17,6 +17,8 @@ Features should currently be considered experimental, and liable to change, poss
 
 ## Larger Known Issues
 
+Microsoft Windows Defender currently flags this program as a Trojan (`Bearfoos.A!ml`) when run in server mode. I believe this is a false positive - there are quite a few examples of [other people complaining around this on the web](https://www.google.com/search?q="Bearfoos.A!ml") and it seems to be [just Windows Defender](https://www.virustotal.com/gui/file/a479a1edb273dafec1920fb7210863d48ce9bd2a0f394ad5ff1cd0478468a18c?nocache=1). I'll see if I can get it unflagged. You're welcome to check the source code and build it yourself (if you want total peace of mind, you'll also need to rebuild the TIC-80 binary and replace that in the `embed` folder).
+
 Some files that are meant to be temporary don't get removed.
 
 The Identity mechanism is incomplete. It's likely that this will be updated.
@@ -27,7 +29,9 @@ This is intended as a standalone TIC-80 launcher that can be used to coordinate 
 
 Cross-compatible on Windows, Mac, and Linux.
 
-## Runnning
+## Running
+
+To get the latest version, visit the [GitHub repo latest releases page](https://github.com/creativenucleus/bytejammer/releases/).
 
 Make sure you place it in a folder of its own. It will create a subfolder to hold some temporary files.
 
@@ -39,19 +43,20 @@ Default (no arguments) mode will launch into jukebox mode, playing random Byteja
 It can be provided with a JSON file playlist (from remote and local) or .zip file.  
 
 Applications:  
-    - To project onto a wall at parties to preach the good TIC and Bytejam words.  
-    - To play at events like the recent Unesco one.  
-    - For DJ visuals.  
-    - Run by a server as a placeholder player for Bytejams.  
-    - For people to just enjoy in their own homes.  
-    - An ad-hoc retro-style kiosk/ad runner.  
-    - For a party to showcase all the entries in a competition.  
+
+- To project onto a wall at parties to preach the good TIC and Bytejam words.  
+- To play at events like the recent Unesco one.  
+- For DJ visuals.  
+- Run by a server as a placeholder player for Bytejams.  
+- For people to just enjoy in their own homes.  
+- An ad-hoc retro-style kiosk/ad runner.  
+- For a party to showcase all the entries in a competition.  
 
 `bytejammer.exe` (default - Livecode DemoZoo ByteJam playlist)
 
 `bytejammer.exe jukebox --playlist .\playlist\trains.json` (play a JSON playlist)
 
-`bytejammer.exe jukebox --playlist .\playlist\nanogems-test-selection.zip` (play files from a .zip)
+`bytejammer.exe jukebox --playlist .\playlist\example-jams-jtruk.zip` (play files from a .zip)
 
 ### Server Mode
 
@@ -62,8 +67,9 @@ Clients can be wired to display TICs, which will spawn as appropriate.
 The jukebox is also a client, just run by a robot.  
 The panel will allow the server operator to snapshot code, switch the links between clients and display TICs, and push code to clients.  
 If input+output can work on a client, also maybe useful for education:  
-    - The server can send some code to all clients  
-    - After an exercise, pull each in turn to display for showcase.  
+
+- The server can send some code to all clients  
+- After an exercise, pull each in turn to display for showcase.  
 
 `bytejammer.exe server` // (Optional: can specify `--localport 4444`)
 
@@ -98,15 +104,19 @@ You can connect a client-jukebox to a remote server, as you would a regular clie
 
 - Remove machine / remove client from link table when closed.
 - Better gatekeeping of client 'lobby'.
+- Improve web panels.
+- Reintroduce NuSan Launcher.
 - Authentication by key.
 - Clean close/open.
 - Messaging feature.
 - Obfuscate session
 - Rationalise capitalisation/skewer of AJAX/WS data.
+- Normalise filepath final slash throughout code (pick one!)
 
-### Ideas
+### Ideas / Later
 
 - TIC-80 version management.
+- LCDZ json builds. Add keyword tags?
 - Wrap WebSocket/Mutex in a class.
 - Pure proxy mode (to sit on a server and facilitate connections between clients without fixed ips).  
 - Multiple hosted ports per server?  
@@ -120,7 +130,7 @@ You can connect a client-jukebox to a remote server, as you would a regular clie
 - Act as a relay (hub), fan out one code to many, or converge / round robin to one display? (applications?)  
 - Is possible: Auto layout of OBS Studio, or a layer in between?  
 - Code posting to a web client via WebSocket?  
-- Support other fantasy consoles (Bazematic? MicroW8? Pico8?) / spec out.  
+- Support other fantasy consoles (Bonzomatic? Bazematic? MicroW8? Pico8?) / spec out.  
 
 ## Alternatives
 
@@ -146,6 +156,6 @@ This project operates with the following sub-licenses:
 
 ## Links and References
 
-[Listing / DemoZoo](https://demozoo.org/productions/330626/)
-[Listing / Pouët](https://pouet.net/prod.php?which=95232)
-[Overview Video / YouTube](https://youtube.com/watch?v=erhyvrGxwZY)
+- [Listing / DemoZoo](https://demozoo.org/productions/330626/)  
+- [Listing / Pouët](https://pouet.net/prod.php?which=95232)  
+- [Overview Video / YouTube](https://youtube.com/watch?v=erhyvrGxwZY)  

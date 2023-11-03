@@ -3,14 +3,14 @@
     <head>
         <meta charset="utf-8">
         <title>ByteJammer</title>
-
+        
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="description" content="">
         <meta name="author" content="jtruk/RiFT">
 
         <link href="/static/package/bootstrap-5.3.2-dist/css/bootstrap.min.css" rel="stylesheet">
         <link rel="stylesheet" href="/static/style/default.css" />
-        <link rel="icon" href="/static/media/favicon/favicon.ico">
+        <link rel="icon" type="image/x-icon" href="/static/media/favicon/favicon.ico">
         <script src="/static/javascript/bytejammer.js"></script>    
 
         <script type="text/javascript">
@@ -85,7 +85,7 @@
                     for (const client of data.Clients) {
                         const rowClass = client.Status == "waiting" ? "table-warning" : "table-success";
                         html += `<tr class="${rowClass}">`;
-                        html += `<td>${client.DisplayName}</td>`;
+                        html += `<td>${client.DisplayName} ${client.ShortUuid}</td>`;
                         html += `<td>${client.Status}</td>`;
                         html += `<td>${client.LastPingTime}</td>`;
                         html += `<td>`
@@ -105,8 +105,8 @@
                                 html += `</ul>`
                                 html += `</div> `
                             }
-                            html += `<button class="btn btn-primary">Decline</button> `;
-                            html += `<button class="btn btn-danger">Block</button> `;
+                            html += `<button class="btn btn-primary" onclick="alert('Not yet implemented!')">Decline</button> `;
+                            html += `<button class="btn btn-danger" onclick="alert('Not yet implemented!')">Block</button> `;
                         }
                         html += `</td>`;
                         html += `</tr>`;
@@ -167,7 +167,7 @@
                     setWsLocalStatusText('ok', "Initialised");
 
                     conn.onerror = (error) => {
-                        alert(`[error]`);
+                        addToLog("Local websocket connection error");
                     }
 
                     conn.onopen = () => {
@@ -175,14 +175,14 @@
                         setWsLocalStatusText('ok', "Open")
                     }
                     
-                    conn.onclose = (evt) => {
+                    conn.onclose = (event) => {
                         addToLog("Disconnected from local");
                         if (event.wasClean) {
                             setWsLocalStatusText('ok', `Closed: Connection closed cleanly, code=${event.code} reason=${event.reason}`);
                         } else {
                             // e.g. server process killed or network down
                             // event.code is usually 1006 in this case
-                            setWsLocalStatusText('error', 'Closed: Connection died');
+                            setWsLocalStatusText('error', 'Closed: Unexpected disconnect');
                         }
                     }
 
@@ -194,7 +194,7 @@
                                 break;
 
                             case "log":
-                                handleMsgLog(msg.data);
+                                handleMsgLog(msg.log);
                                 break;
 
                             default:
@@ -205,24 +205,24 @@
 
                 document.getElementById("start-server").addEventListener("submit", (e) => {
                     e.preventDefault();
-                    if (!ws.isOpen()) {
-                        return false;
-                    }
                     const data = getDataFromForm(e.target)
                     e.target.reset();
 
                     addToLog(`Requested Start Server on port: ${data.port}`);
                     (async() => {
-                        const res = await ajax.makeReq("POST", "server", {port: data.port})
+                        const res = await ajax.makeReq("POST", "server", {port: data.port, 'session-name': data['session-name']})
+                        if (res.ok) {
+                            addToLog("Server Started");
+                        }
                     })();
                 });
 
-                document.getElementById("btn-clients").onclick = () => {
+                document.getElementById("btn-identify-machines").onclick = () => {
                     if (!ws.isOpen()) {
                         return false;
                     }
-                    addToLog(`Sending identfier code to Jammers`);
-                    ws.sendMsg("reset-clients", {});
+                    addToLog(`Sending identifier code to Machines`);
+                    ws.sendMsg("identify-machines", {});
                     return false;
                 };
 
@@ -231,6 +231,9 @@
                     addToLog("Requested TIC-80 (unassigned)");
                     (async() => {
                         const res = await ajax.makeReq("POST", "machine", {platform: "TIC-80", mode: "unassigned"})
+                        if (res.ok) {
+                            addToLog("TIC-80 (unassigned) Started");
+                        }
                     })();
                 });
 
@@ -239,6 +242,9 @@
                     addToLog("Requested TIC-80 (jukebox)");
                     (async() => {
                         const res = await ajax.makeReq("POST", "machine", {platform: "TIC-80", mode: "jukebox"})
+                        if (res.ok) {
+                            addToLog("TIC-80 (Jukebox) Started");
+                        }
                     })();
                 });
             };
@@ -264,21 +270,21 @@
                                 <input type="number" value="4455" class="form-control" id="port" name="port" aria-describedby="port">
                             </div>
                             <div class="col-auto">
-                                <span id="displayNameHelp" class="form-text">
+                                <span id="portHelp" class="form-text">
                                     
                                 </span>
                             </div>
                         </div>
                         <div class="row g-3 align-items-center">
                             <div class="col-auto">
-                                <label for="message" class="form-label">Welcome Message</label>
+                                <label for="session-name" class="form-label">Session Name</label>
                             </div>
                             <div class="col-auto">
-                                <textarea class="form-control" id="port" name="message" aria-describedby="message"></textarea>
+                                <input class="form-control" id="session-name" name="session-name" aria-describedby="session-name">
                             </div>
                             <div class="col-auto">
-                                <span id="welcomeMessageHelp" class="form-text">
-                                    When you accept people's connections, this message will be sent to them.
+                                <span id="sessionNameHelp" class="form-text">
+                                    A directory will be created on your filesystem for this session
                                 </span>
                             </div>
                         </div>
@@ -313,7 +319,7 @@
                             <li><a class="dropdown-item" id="start-tic-playlist">TIC (playlist: LCDZ)</a></li>
                         </ul>
                     </div>
-                    <button id="btn-clients" class="btn btn-primary">Send IDENTIFIER CODE to Jammers</button>
+                    <button id="btn-identify-machines" class="btn btn-primary">Identify Machines (30s)</button>
                 </div>
             </div>
 
@@ -328,7 +334,7 @@
         </div>
 
         <div class="fixed-bottom">
-            <div class="container">
+            <div class="container" id="connection-status-panel">
                 <div>Connection to Local: <span id="ws-local-status">(none)</span></div>
             </div>
         </div>

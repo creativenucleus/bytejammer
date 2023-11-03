@@ -9,10 +9,13 @@ import (
 
 	"github.com/creativenucleus/bytejammer/config"
 	"github.com/creativenucleus/bytejammer/machines"
+	"github.com/creativenucleus/bytejammer/util"
 )
 
 type ClientWS struct {
-	ws *SenderWebSocket
+	ws       *WebSocketLink
+	chMsg    chan Msg
+	basepath string
 }
 
 type ClientServerStatus struct {
@@ -21,7 +24,17 @@ type ClientServerStatus struct {
 
 func startClientServerConn(host string, port int, identity *Identity, chServerStatus chan ClientServerStatus) error {
 	chServerStatus <- ClientServerStatus{isConnected: false}
-	cws := ClientWS{}
+	cws := ClientWS{
+		chMsg: make(chan Msg),
+	}
+
+	cws.basepath = filepath.Clean(fmt.Sprintf("%sclient-data/%s", config.WORK_DIR, util.GetSlugFromTime(time.Now())))
+	//	chLog <- fmt.Sprintf("Creating directory: %s", cws.basepath)
+	err := util.EnsurePathExists(cws.basepath, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
 	// Keep running until we make a connection
 	for {
 		// #TODO: This is not the right construction
@@ -54,8 +67,8 @@ func startClientServerConn(host string, port int, identity *Identity, chServerSt
 	}
 }
 
-func clientOpenConnection(host string, port int) (*SenderWebSocket, error) {
-	ws, err := NewWebSocketClient(host, port)
+func clientOpenConnection(host string, port int) (*WebSocketLink, error) {
+	ws, err := NewWebSocketLink(host, port, "/ws-bytejam")
 	if err != nil {
 		return nil, err
 	}
@@ -78,15 +91,36 @@ func (cws *ClientWS) clientWsReader(tic *machines.Tic) error {
 		}
 
 		switch msg.Type {
+		case "challenge-request":
+			cws.handleChallengeRequest(msg.ChallengeRequest.Challenge)
+
 		case "tic-state":
 			tic.WriteImportCode(msg.TicState)
 		}
 	}
 }
 
+func (cws *ClientWS) handleChallengeRequest(challenge string) {
+	cws.chMsg <- Msg{Type: "challenge-response", ChallengeResponse: DataChallengeResponse{Challenge: challenge + " ~ response"}}
+}
+
 // #TODO: fatalErr
 func (cws *ClientWS) clientWsWriter(tic *machines.Tic, identity *Identity) {
-	err := cws.ws.sendIdentity(identity)
+	// Send Identity...
+	publicKeyRaw, err := identity.Crypto.publicKeyToRaw()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	msg := Msg{
+		Type: "identity",
+		Identity: DataIdentity{
+			Uuid:        identity.Uuid.String(),
+			DisplayName: identity.DisplayName,
+			PublicKey:   publicKeyRaw,
+		},
+	}
+	err = cws.ws.sendData(&msg)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -99,6 +133,8 @@ func (cws *ClientWS) clientWsWriter(tic *machines.Tic, identity *Identity) {
 	var lastTicState *machines.TicState
 	for {
 		select {
+		case msg := <-cws.chMsg:
+			cws.ws.sendData(msg)
 		//		case <-done:
 		//			return
 		case <-fileCheckTicker.C:
@@ -116,14 +152,16 @@ func (cws *ClientWS) clientWsWriter(tic *machines.Tic, identity *Identity) {
 			}
 
 			if ticState.IsRunning {
-				err := saveCode(ticState.Code)
+				err := cws.saveCode(ticState.Code)
 				if err != nil {
 					log.Fatal(err)
 					break
 				}
 			}
 
-			err = cws.ws.sendCode(*ticState)
+			// #TODO: line endings for data? UTF-8?
+			msg := Msg{Type: "tic-state", TicState: *ticState}
+			err = cws.ws.sendData(msg)
 			if err != nil {
 				log.Fatal(err)
 				break
@@ -160,8 +198,7 @@ func readFile(filename string) ([]byte, error) {
 	return data, nil
 }
 
-func saveCode(code []byte) error {
-	now := time.Now()
-	path := filepath.Clean(fmt.Sprintf("%scode-%s", config.WORK_DIR, now.Format("20060102-150405")))
+func (cws *ClientWS) saveCode(code []byte) error {
+	path := filepath.Clean(fmt.Sprintf("%s/code-%s.lua", cws.basepath, util.GetSlugFromTime(time.Now())))
 	return os.WriteFile(path, code, 0644)
 }
