@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
@@ -56,7 +57,7 @@ func startClientServerConn(host string, port int, identity *Identity, chServerSt
 	defer m.Shutdown()
 
 	// #TODO: shift import / export to *Machine?
-	go cws.clientWsReader(m.Tic)
+	go cws.clientWsReader(m.Tic, identity)
 	go cws.clientWsWriter(m.Tic, identity)
 
 	// Lock #TODO: use a channel to escape
@@ -73,7 +74,7 @@ func clientOpenConnection(host string, port int) (*WebSocketLink, error) {
 	return ws, nil
 }
 
-func (cws *ClientWS) clientWsReader(tic *machines.Tic) error {
+func (cws *ClientWS) clientWsReader(tic *machines.Tic, identity *Identity) error {
 	for {
 		var msg comms.Msg
 		err := cws.ws.conn.ReadJSON(&msg)
@@ -89,7 +90,7 @@ func (cws *ClientWS) clientWsReader(tic *machines.Tic) error {
 
 		switch msg.Type {
 		case "challenge-request":
-			cws.handleChallengeRequest(msg.ChallengeRequest.Challenge)
+			cws.handleChallengeRequest(msg.ChallengeRequest.Challenge, identity)
 
 		case "tic-state":
 			tic.WriteImportCode(msg.TicState.State)
@@ -97,14 +98,27 @@ func (cws *ClientWS) clientWsReader(tic *machines.Tic) error {
 	}
 }
 
-func (cws *ClientWS) handleChallengeRequest(challenge string) {
-	cws.chMsg <- comms.Msg{Type: "challenge-response", ChallengeResponse: comms.DataChallengeResponse{Challenge: challenge + " ~ response"}}
+func (cws *ClientWS) handleChallengeRequest(challenge string, identity *Identity) error {
+	data, err := hex.DecodeString(challenge)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("%x", data)
+	signed, err := identity.Crypto.Sign(data)
+	if err != nil {
+		return err
+	}
+
+	cws.chMsg <- comms.Msg{Type: "challenge-response", ChallengeResponse: comms.DataChallengeResponse{Challenge: fmt.Sprintf("%x", signed)}}
+
+	return nil
 }
 
 // #TODO: fatalErr
 func (cws *ClientWS) clientWsWriter(tic *machines.Tic, identity *Identity) {
 	// Send Identity...
-	publicKeyRaw, err := identity.Crypto.publicKeyToRaw()
+	publicKeyRaw, err := identity.Crypto.PublicKeyToPem()
 	if err != nil {
 		log.Fatal(err)
 	}

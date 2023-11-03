@@ -40,7 +40,7 @@ func CreateSession(port int, name string, chLog chan string) (*Session, error) {
 	js := Session{
 		port:      port,
 		name:      name,
-		slug:      fmt.Sprintf("%s_%s", nameSlug, util.GetSlugFromTime(now)),
+		slug:      fmt.Sprintf("%s_%s", util.GetSlugFromTime(now), nameSlug),
 		startTime: now,
 		manager:   makeSessionManager(),
 		chLog:     chLog,
