@@ -96,10 +96,8 @@ You can connect a client-jukebox to a remote server, as you would a regular clie
 
 ### TODO
 
-- Automatic snapshot on each code run.
+- Remove machine / remove client from link table when closed.
 - Better gatekeeping of client 'lobby'.
-- Improve web panels.
-- TIC-80 version management
 - Authentication by key.
 - Clean close/open.
 - Messaging feature.
@@ -108,6 +106,7 @@ You can connect a client-jukebox to a remote server, as you would a regular clie
 
 ### Ideas
 
+- TIC-80 version management.
 - Wrap WebSocket/Mutex in a class.
 - Pure proxy mode (to sit on a server and facilitate connections between clients without fixed ips).  
 - Multiple hosted ports per server?  
