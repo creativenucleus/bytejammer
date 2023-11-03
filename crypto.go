@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
+	"fmt"
 )
 
 type CryptoPrivate struct {
@@ -21,7 +22,7 @@ func newCryptoPrivate() (*CryptoPrivate, error) {
 	c := CryptoPrivate{}
 
 	var err error
-	c.privateKey, err = rsa.GenerateKey(rand.Reader, 2048)
+	c.privateKey, err = rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
 		return nil, err
 	}
@@ -29,19 +30,19 @@ func newCryptoPrivate() (*CryptoPrivate, error) {
 	return &c, nil
 }
 
-func newCryptoPrivateFromString(keyRaw []byte) (*CryptoPrivate, error) {
+func newCryptoPrivateFromString(privKey string) (*CryptoPrivate, error) {
 	c := CryptoPrivate{}
 
 	var err error
-	c.privateKey, err = x509.ParsePKCS1PrivateKey(keyRaw)
+	p, _ := pem.Decode([]byte(privKey))
+	c.privateKey, err = x509.ParsePKCS1PrivateKey(p.Bytes)
 	if err != nil {
 		return nil, err
 	}
-
 	return &c, nil
 }
 
-func (c CryptoPrivate) privateKeyToRaw() []byte {
+func (c CryptoPrivate) privateKeyToPem() []byte {
 	data := x509.MarshalPKCS1PrivateKey(c.privateKey)
 
 	privBlock := pem.Block{
@@ -53,20 +54,20 @@ func (c CryptoPrivate) privateKeyToRaw() []byte {
 	return pem.EncodeToMemory(&privBlock)
 }
 
-func (c CryptoPrivate) publicKeyToRaw() ([]byte, error) {
-	data, err := x509.MarshalPKIXPublicKey(&c.privateKey.PublicKey)
+func (c CryptoPrivate) publicKeyToPem() ([]byte, error) {
+	data, err := x509.MarshalPKIXPublicKey(c.privateKey.Public())
 	if err != nil {
 		return nil, err
 	}
 
-	pem := pem.EncodeToMemory(
+	pemData := pem.EncodeToMemory(
 		&pem.Block{
 			Type:  "RSA PUBLIC KEY",
 			Bytes: data,
 		},
 	)
 
-	return pem, nil
+	return pemData, nil
 }
 
 func (c *CryptoPrivate) MarshalJSON() ([]byte, error) {
@@ -74,7 +75,7 @@ func (c *CryptoPrivate) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		PrivateKey []byte `json:"privateKey"`
 	}{
-		PrivateKey: c.privateKeyToRaw(),
+		PrivateKey: c.privateKeyToPem(),
 	})
 }
 
@@ -108,25 +109,41 @@ func hashData(data []byte) []byte {
 
 // Make a hash of the data, then sign it
 func (c CryptoPrivate) sign(data []byte) ([]byte, error) {
-	return rsa.SignPKCS1v15(rand.Reader, c.privateKey, crypto.SHA256, hashData(data))
+	return rsa.SignPSS(rand.Reader, c.privateKey, crypto.SHA256, hashData(data), nil)
 }
 
 type CryptoPublic struct {
 	publicKey *rsa.PublicKey
 }
 
-func newCryptoPublicFromString(keyString string) (*CryptoPublic, error) {
+func newCryptoPublicFromPem(pemData []byte) (*CryptoPublic, error) {
 	c := CryptoPublic{}
 
-	var err error
-	c.publicKey, err = x509.ParsePKCS1PublicKey([]byte(keyString))
+	block, _ := pem.Decode(pemData)
+	if block == nil {
+		return nil, fmt.Errorf("bad key data: %s", "not PEM-encoded")
+	}
+
+	if block.Type != "RSA PUBLIC KEY" {
+		return nil, fmt.Errorf("type was not public key: %s", block.Type)
+	}
+
+	pubKey, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
 		return nil, err
+	}
+
+	switch pubKey.(type) {
+	case *rsa.PublicKey:
+		c.publicKey = pubKey.(*rsa.PublicKey)
+	default:
+		return nil, fmt.Errorf("type was not known public key type")
 	}
 
 	return &c, nil
 }
 
-func (c CryptoPublic) verifySigned(data []byte, signature []byte) (bool, error) {
-	return rsa.VerifyPKCS1v15(c.publicKey, crypto.SHA256, hashData(data), signature) == nil, nil
+func (c CryptoPublic) verifySigned(data []byte, signature []byte) bool {
+	err := rsa.VerifyPSS(c.publicKey, crypto.SHA256, hashData(data), signature, nil)
+	return err == nil
 }
