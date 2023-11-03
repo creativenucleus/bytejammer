@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/creativenucleus/bytejammer/comms"
 	"github.com/gorilla/websocket"
 )
 
@@ -43,19 +44,23 @@ func NusanLauncherConnect(port int) (*NusanLauncher, error) {
 func wsNusan(nl NusanLauncher) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var err error
-		nl.wsConn, err = wsUpgrader.Upgrade(w, r, nil)
+
+		comms.WsUpgrade(w, r, func(conn *websocket.Conn) error {
+			nl.wsConn = conn
+			defer func() { nl.wsConn = nil }()
+
+			go nl.nusanWsOperatorRead()
+			go nl.nusanWsOperatorWrite()
+
+			// #TODO: handle exit
+			for {
+			}
+
+			return nil
+		})
 		if err != nil {
 			log.Print("ERR upgrade:", err)
 			return
-		}
-		// #TODO: Not great!
-		defer nl.wsConn.Close()
-
-		go nl.nusanWsOperatorRead()
-		go nl.nusanWsOperatorWrite()
-
-		// #TODO: handle exit
-		for {
 		}
 	}
 }

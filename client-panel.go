@@ -14,6 +14,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/tyler-sommer/stick"
 
+	"github.com/creativenucleus/bytejammer/comms"
 	"github.com/creativenucleus/bytejammer/embed"
 )
 
@@ -27,7 +28,7 @@ const (
 
 type ClientPanel struct {
 	// #TODO: lock down to receiver only
-	chSendServerStatus chan ClientServerStatus
+	chSendServerStatus chan comms.DataClientServerStatus
 	wsClient           *websocket.Conn
 	wsMutex            sync.Mutex
 }
@@ -50,7 +51,7 @@ func startClientPanel(port int) error {
 	fmt.Printf("In a web browser, go to http://localhost:%d/%s\n", port, session)
 
 	cp := ClientPanel{
-		chSendServerStatus: make(chan ClientServerStatus),
+		chSendServerStatus: make(chan comms.DataClientServerStatus),
 	}
 	http.HandleFunc(fmt.Sprintf("/%s", session), cp.webClientIndex)
 	http.HandleFunc(fmt.Sprintf("/%s/api/identity.json", session), cp.webClientApiIdentityJSON)
@@ -112,7 +113,7 @@ func (cp *ClientPanel) webClientApiIdentityJSON(w http.ResponseWriter, r *http.R
 func (cp *ClientPanel) webClientApiJoinServerJSON(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "POST":
-		cp.chSendServerStatus <- ClientServerStatus{isConnected: false}
+		cp.chSendServerStatus <- comms.DataClientServerStatus{IsConnected: false}
 
 		// #TODO: Cleaner way to do this?
 		type reqType struct {
@@ -156,25 +157,30 @@ func (cp *ClientPanel) webClientApiJoinServerJSON(w http.ResponseWriter, r *http
 func (cp *ClientPanel) wsWebClient() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var err error
-		cp.wsClient, err = wsUpgrader.Upgrade(w, r, nil)
+
+		comms.WsUpgrade(w, r, func(conn *websocket.Conn) error {
+			cp.wsClient = conn
+			defer func() { cp.wsClient = nil }()
+
+			go cp.wsRead()
+			go cp.wsWrite()
+
+			// #TODO: handle exit
+			for {
+			}
+
+			return nil
+		})
 		if err != nil {
 			log.Print("upgrade:", err)
 			return
-		}
-		defer cp.wsClient.Close()
-
-		go cp.wsRead()
-		go cp.wsWrite()
-
-		// #TODO: handle exit
-		for {
 		}
 	}
 }
 
 func (cp *ClientPanel) wsRead() {
 	for {
-		var msg Msg
+		var msg comms.Msg
 		err := cp.wsClient.ReadJSON(&msg)
 		if err != nil {
 			log.Println("read:", err)
@@ -203,7 +209,7 @@ func (cp *ClientPanel) wsWrite() {
 		//			fmt.Println("TICKER!")
 
 		case status := <-cp.chSendServerStatus:
-			msg := Msg{Type: "server-status", ServerStatus: status}
+			msg := comms.Msg{Type: "server-status", ServerStatus: status}
 			err := cp.sendData(&msg)
 			if err != nil {
 				// #TODO: relax

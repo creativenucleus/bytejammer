@@ -1,4 +1,4 @@
-package server
+package machines
 
 import (
 	"math/rand"

@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/creativenucleus/bytejammer/comms"
 	"github.com/creativenucleus/bytejammer/embed"
 	"github.com/creativenucleus/bytejammer/machines"
 )
@@ -15,10 +16,10 @@ const (
 
 type Jukebox struct {
 	playlist *Playlist
-	comms    *chan Msg
+	comms    *chan comms.Msg
 }
 
-func NewJukebox(playlist *Playlist, comms *chan Msg) (*Jukebox, error) {
+func NewJukebox(playlist *Playlist, comms *chan comms.Msg) (*Jukebox, error) {
 	log.Printf("-> Launching Jukebox for playlist")
 
 	j := Jukebox{
@@ -38,7 +39,7 @@ func (j *Jukebox) start() {
 		})
 		tsFirst.SetCode(code)
 
-		(*j.comms) <- Msg{Type: "tic-state", TicState: tsFirst}
+		(*j.comms) <- comms.Msg{Type: "tic-state", TicState: tsFirst}
 
 		rotateTicker := time.NewTicker(rotatePeriod)
 		defer rotateTicker.Stop()
@@ -71,7 +72,7 @@ func (j *Jukebox) start() {
 				*/
 
 				ts := machines.MakeTicStateRunning(code)
-				(*j.comms) <- Msg{Type: "tic-state", TicState: ts}
+				(*j.comms) <- comms.Msg{Type: "tic-state", TicState: ts}
 			}
 		}
 	}()

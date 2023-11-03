@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/creativenucleus/bytejammer/comms"
 	"github.com/creativenucleus/bytejammer/config"
 	"github.com/creativenucleus/bytejammer/machines"
 	"github.com/creativenucleus/bytejammer/util"
@@ -14,18 +15,14 @@ import (
 
 type ClientWS struct {
 	ws       *WebSocketLink
-	chMsg    chan Msg
+	chMsg    chan comms.Msg
 	basepath string
 }
 
-type ClientServerStatus struct {
-	isConnected bool
-}
-
-func startClientServerConn(host string, port int, identity *Identity, chServerStatus chan ClientServerStatus) error {
-	chServerStatus <- ClientServerStatus{isConnected: false}
+func startClientServerConn(host string, port int, identity *Identity, chServerStatus chan comms.DataClientServerStatus) error {
+	chServerStatus <- comms.DataClientServerStatus{IsConnected: false}
 	cws := ClientWS{
-		chMsg: make(chan Msg),
+		chMsg: make(chan comms.Msg),
 	}
 
 	cws.basepath = filepath.Clean(fmt.Sprintf("%sclient-data/%s", config.WORK_DIR, util.GetSlugFromTime(time.Now())))
@@ -50,7 +47,7 @@ func startClientServerConn(host string, port int, identity *Identity, chServerSt
 		break
 	}
 	defer cws.ws.Close()
-	chServerStatus <- ClientServerStatus{isConnected: true}
+	chServerStatus <- comms.DataClientServerStatus{IsConnected: true}
 
 	m, err := machines.LaunchMachine("TIC-80", true, true, false)
 	if err != nil {
@@ -78,7 +75,7 @@ func clientOpenConnection(host string, port int) (*WebSocketLink, error) {
 
 func (cws *ClientWS) clientWsReader(tic *machines.Tic) error {
 	for {
-		var msg Msg
+		var msg comms.Msg
 		err := cws.ws.conn.ReadJSON(&msg)
 		if err != nil {
 			log.Fatal(err)
@@ -95,13 +92,13 @@ func (cws *ClientWS) clientWsReader(tic *machines.Tic) error {
 			cws.handleChallengeRequest(msg.ChallengeRequest.Challenge)
 
 		case "tic-state":
-			tic.WriteImportCode(msg.TicState)
+			tic.WriteImportCode(msg.TicState.State)
 		}
 	}
 }
 
 func (cws *ClientWS) handleChallengeRequest(challenge string) {
-	cws.chMsg <- Msg{Type: "challenge-response", ChallengeResponse: DataChallengeResponse{Challenge: challenge + " ~ response"}}
+	cws.chMsg <- comms.Msg{Type: "challenge-response", ChallengeResponse: comms.DataChallengeResponse{Challenge: challenge + " ~ response"}}
 }
 
 // #TODO: fatalErr
@@ -112,9 +109,9 @@ func (cws *ClientWS) clientWsWriter(tic *machines.Tic, identity *Identity) {
 		log.Fatal(err)
 	}
 
-	msg := Msg{
+	msg := comms.Msg{
 		Type: "identity",
-		Identity: DataIdentity{
+		Identity: comms.DataIdentity{
 			Uuid:        identity.Uuid.String(),
 			DisplayName: identity.DisplayName,
 			PublicKey:   publicKeyRaw,
@@ -160,7 +157,7 @@ func (cws *ClientWS) clientWsWriter(tic *machines.Tic, identity *Identity) {
 			}
 
 			// #TODO: line endings for data? UTF-8?
-			msg := Msg{Type: "tic-state", TicState: *ticState}
+			msg := comms.Msg{Type: "tic-state", TicState: *ticState}
 			err = cws.ws.sendData(msg)
 			if err != nil {
 				log.Fatal(err)
