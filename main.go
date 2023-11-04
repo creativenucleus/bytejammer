@@ -73,7 +73,6 @@ func main() {
 					if err != nil {
 						log.Fatal(err)
 					}
-					// err = startLocalJukebox(playlist)
 					err = startLocalJukebox(playlist, playtime)
 					if err != nil {
 						log.Fatal(err)
