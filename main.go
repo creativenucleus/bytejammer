@@ -66,8 +66,6 @@ func main() {
 				Action: func(cCtx *cli.Context) error {
 					var_playtime := cCtx.Uint("playtime")
 					fmt.Printf("default playtime is %d\n", var_playtime)
-
-					// var playtime = time.Duration(cCtx.Uint("playtime")) * time.Second
 					var playtime = time.Duration(var_playtime) * time.Second
 
 					playlistFilename := cCtx.String("playlist")
@@ -164,7 +162,6 @@ func main() {
 				Action: func(cCtx *cli.Context) error {
 					var_playtime := cCtx.Uint("playtime")
 					fmt.Printf("default playtime is %d\n", var_playtime)
-					// var playtime = time.Duration(cCtx.Uint("playtime")) * time.Second
 					var playtime = time.Duration(var_playtime) * time.Second
 
 					host := cCtx.String("host")
