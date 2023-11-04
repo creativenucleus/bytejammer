@@ -138,33 +138,6 @@ func main() {
 					}
 					return nil
 				},
-				// Start *** DAVE
-				// }, {
-				// 	Name:  "playtime",
-				// 	Usage: "Playtime for each item",
-				// 	Flags: []cli.Flag{
-				// 		//&cli.StringFlag{
-				// 		&cli.DurationFlag{
-				// 			Name:  "playtime",
-				// 			Usage: "Playtime for each item, default 7 sec",
-				// 			Value: time.Second * 7,
-				// 		},
-				// 	},
-				// 	// &cli.DurationFlag{Name: "howlong", Aliases: []string{"H"}, Value: time.Second * 3},
-				// 	// Action: func (cCtx *cli.Context) Duration(name string) time.Duration
-				// 	Action: func(cCtx *cli.Context) error {
-				// 		// playtime := cCtx.Int("playtime")
-				// 		playtime := cCtx.Duration("playtime")
-				// 		// set := flag.NewFlagSet("contrive", 0)
-				// 		// nc := cli.NewContext(cCtx.App, set, cCtx)
-				// 		fmt.Printf("%#v\n", playtime)
-				// 		//err = startClientPanel(playtime)
-				// 		// if err != nil {
-				// 		// 	log.Fatal(err)
-				// 		// }
-				// 		return nil
-				// 	},
-				//*** DAVE
 			}, {
 				Name:  "client-jukebox",
 				Usage: "Run client-jukebox",
