@@ -9,6 +9,7 @@ type PlaylistJSON struct {
 		Location    string `json:"location"`
 		Author      string `json:"author"`
 		Description string `json:"description"`
+		PlayTime    uint32 `json:"playtime"`
 	} `json:"items"`
 }
 
@@ -27,6 +28,7 @@ func NewPlaylistFromJSON(bytesIn []byte) (*Playlist, error) {
 			location:    item.Location,
 			author:      item.Author,
 			description: item.Description,
+			playtime:    item.PlayTime,
 		})
 	}
 

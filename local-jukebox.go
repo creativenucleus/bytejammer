@@ -3,16 +3,17 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/creativenucleus/bytejammer/machines"
 )
 
-func startLocalJukebox(playlist *Playlist) error {
+func startLocalJukebox(playlist *Playlist, playtime time.Duration) error {
 	fmt.Printf("Starting local jukebox containing %d items\n", len(playlist.items))
 
 	ch := make(chan Msg)
 
-	j, err := NewJukebox(playlist, &ch)
+	j, err := NewJukebox(playlist, playtime, &ch)
 	if err != nil {
 		return err
 	}

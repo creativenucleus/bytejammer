@@ -241,7 +241,9 @@ func (hp *HostPanel) webApiMachine(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			err = startLocalJukebox(playlist)
+			playtime := 7 * time.Second //TODO: playtime
+
+			err = startLocalJukebox(playlist, playtime)
 			if err != nil {
 				apiOutErr(w, err, http.StatusInternalServerError)
 				return

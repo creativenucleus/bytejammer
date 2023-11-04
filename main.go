@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/urfave/cli/v2"
 
@@ -57,15 +58,25 @@ func main() {
 						Name:  "playlist",
 						Usage: "Playlist file (empty for LCDZ playlist)",
 					},
+					&cli.StringFlag{
+						Name:  "playtime",
+						Usage: "Playtime for each item, default 7 sec",
+					},
 				},
 				Action: func(cCtx *cli.Context) error {
+					var_playtime := cCtx.Uint("playtime")
+					fmt.Printf("default playtime is %d\n", var_playtime)
+
+					// var playtime = time.Duration(cCtx.Uint("playtime")) * time.Second
+					var playtime = time.Duration(var_playtime) * time.Second
+
 					playlistFilename := cCtx.String("playlist")
 					playlist, err := readPlaylist(playlistFilename)
 					if err != nil {
 						log.Fatal(err)
 					}
-
-					err = startLocalJukebox(playlist)
+					// err = startLocalJukebox(playlist)
+					err = startLocalJukebox(playlist, playtime)
 					if err != nil {
 						log.Fatal(err)
 					}
@@ -106,7 +117,6 @@ func main() {
 					if err != nil {
 						log.Fatal(err)
 					}
-
 					return nil
 				},
 			}, {
@@ -128,6 +138,33 @@ func main() {
 					}
 					return nil
 				},
+				// Start *** DAVE
+				// }, {
+				// 	Name:  "playtime",
+				// 	Usage: "Playtime for each item",
+				// 	Flags: []cli.Flag{
+				// 		//&cli.StringFlag{
+				// 		&cli.DurationFlag{
+				// 			Name:  "playtime",
+				// 			Usage: "Playtime for each item, default 7 sec",
+				// 			Value: time.Second * 7,
+				// 		},
+				// 	},
+				// 	// &cli.DurationFlag{Name: "howlong", Aliases: []string{"H"}, Value: time.Second * 3},
+				// 	// Action: func (cCtx *cli.Context) Duration(name string) time.Duration
+				// 	Action: func(cCtx *cli.Context) error {
+				// 		// playtime := cCtx.Int("playtime")
+				// 		playtime := cCtx.Duration("playtime")
+				// 		// set := flag.NewFlagSet("contrive", 0)
+				// 		// nc := cli.NewContext(cCtx.App, set, cCtx)
+				// 		fmt.Printf("%#v\n", playtime)
+				// 		//err = startClientPanel(playtime)
+				// 		// if err != nil {
+				// 		// 	log.Fatal(err)
+				// 		// }
+				// 		return nil
+				// 	},
+				//*** DAVE
 			}, {
 				Name:  "client-jukebox",
 				Usage: "Run client-jukebox",
@@ -146,8 +183,17 @@ func main() {
 						Name:  "playlist",
 						Usage: "Playlist file (empty for LCDZ playlist)",
 					},
+					&cli.StringFlag{
+						Name:  "playtime",
+						Usage: "Playtime for each item, default 7 sec",
+					},
 				},
 				Action: func(cCtx *cli.Context) error {
+					var_playtime := cCtx.Uint("playtime")
+					fmt.Printf("default playtime is %d\n", var_playtime)
+					// var playtime = time.Duration(cCtx.Uint("playtime")) * time.Second
+					var playtime = time.Duration(var_playtime) * time.Second
+
 					host := cCtx.String("host")
 					port := cCtx.Int("port")
 					playlistFilename := cCtx.String("playlist")
@@ -156,7 +202,7 @@ func main() {
 						log.Fatal(err)
 					}
 
-					err = startClientJukebox(host, port, playlist)
+					err = startClientJukebox(host, port, playtime, playlist)
 					if err != nil {
 						log.Fatal(err)
 					}

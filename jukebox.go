@@ -15,14 +15,16 @@ const (
 
 type Jukebox struct {
 	playlist *Playlist
+	playtime time.Duration
 	comms    *chan Msg
 }
 
-func NewJukebox(playlist *Playlist, comms *chan Msg) (*Jukebox, error) {
+func NewJukebox(playlist *Playlist, playtime time.Duration, comms *chan Msg) (*Jukebox, error) {
 	log.Printf("-> Launching Jukebox for playlist")
 
 	j := Jukebox{
 		comms:    comms,
+		playtime: playtime,
 		playlist: playlist,
 	}
 
@@ -60,6 +62,22 @@ func (j *Jukebox) start() {
 				if playlistItem.description != "" {
 					fmt.Printf("Description: %s\n", playlistItem.description)
 				}
+
+				var timeoutduration time.Duration
+				//from json file
+				if playlistItem.playtime > 0 {
+					timeoutduration = time.Duration(playlistItem.playtime) * time.Second
+				}
+				//from command prompt
+				if j.playtime > 0 {
+					timeoutduration = time.Duration(j.playtime)
+				}
+				//internal default
+				if timeoutduration == 0 {
+					timeoutduration = rotatePeriod
+				}
+				fmt.Printf("Playtime: %s\n", timeoutduration)
+				rotateTicker.Reset(timeoutduration)
 
 				code := playlistItem.code
 

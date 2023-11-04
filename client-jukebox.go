@@ -1,10 +1,13 @@
 package main
 
-import "log"
+import (
+	"log"
+	"time"
+)
 
-func startClientJukebox(host string, port int, playlist *Playlist) error {
+func startClientJukebox(host string, port int, playtime time.Duration, playlist *Playlist) error {
 	ch := make(chan Msg)
-	j, err := NewJukebox(playlist, &ch)
+	j, err := NewJukebox(playlist, playtime, &ch)
 	if err != nil {
 		return err
 	}
