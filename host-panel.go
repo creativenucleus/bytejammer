@@ -11,7 +11,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/creativenucleus/bytejammer/comms"
 	"github.com/creativenucleus/bytejammer/embed"
+	"github.com/creativenucleus/bytejammer/server"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/tyler-sommer/stick"
@@ -26,7 +28,7 @@ const statusSendPeriod = 5 * time.Second
 type HostPanel struct {
 	wsOperator   *websocket.Conn
 	wsMutex      sync.Mutex
-	session      *JamSession
+	session      *server.Session
 	chLog        chan string
 	statusTicker *time.Ticker
 }
@@ -83,29 +85,30 @@ func (hp *HostPanel) webOperator(w http.ResponseWriter, r *http.Request) {
 func (hp *HostPanel) wsWebOperator() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var err error
-		hp.wsOperator, err = wsUpgrader.Upgrade(w, r, nil)
+
+		comms.WsUpgrade(w, r, func(conn *websocket.Conn) error {
+			hp.wsOperator = conn
+			defer func() { hp.wsOperator = nil }()
+
+			go hp.wsOperatorRead()
+			go hp.wsOperatorWrite()
+
+			// #TODO: handle exit
+			for {
+			}
+
+			return nil
+		})
 		if err != nil {
 			log.Print("upgrade:", err)
 			return
-		}
-
-		defer func() {
-			hp.wsOperator.Close()
-			hp.wsOperator = nil
-		}()
-
-		go hp.wsOperatorRead()
-		go hp.wsOperatorWrite()
-
-		// #TODO: handle exit
-		for {
 		}
 	}
 }
 
 func (hp *HostPanel) wsOperatorRead() {
 	for {
-		var msg Msg
+		var msg comms.Msg
 		err := hp.wsOperator.ReadJSON(&msg)
 		if err != nil {
 			log.Println("read:", err)
@@ -177,7 +180,7 @@ func (hp *HostPanel) webApiServer(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		hp.session, err = startJamSession(port, req.SessionName, hp.chLog)
+		hp.session, err = server.CreateSession(port, req.SessionName, hp.chLog)
 		if err != nil {
 			hp.chLog <- fmt.Sprintf("Server failed to launch: %s", err)
 			apiOutErr(w, err, http.StatusInternalServerError)
@@ -211,7 +214,7 @@ func (hp *HostPanel) webApiMachine(w http.ResponseWriter, r *http.Request) {
 
 		switch req.Mode {
 		case "unassigned":
-			_, err := hp.session.startMachine()
+			_, err := hp.session.StartMachine()
 			if err != nil {
 				apiOutErr(w, fmt.Errorf("TIC-80 Launch (unassigned): %w", err), http.StatusBadRequest)
 				return
@@ -226,7 +229,7 @@ func (hp *HostPanel) webApiMachine(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			_, err = hp.session.startMachineForConn(connUuid)
+			_, err = hp.session.StartMachineForConn(connUuid)
 			if err != nil {
 				apiOutErr(w, fmt.Errorf("TIC-80 Launch (jammer): %w", err), http.StatusBadRequest)
 				return
@@ -268,7 +271,7 @@ func (hp *HostPanel) handleStopServer() {
 		return
 	}
 
-	hp.session.stop()
+	hp.session.Stop()
 	hp.sendServerStatus(true)
 }
 
@@ -278,37 +281,37 @@ func (hp *HostPanel) handleIdentifyMachines() {
 		return
 	}
 
-	hp.session.identifyMachines()
+	hp.session.IdentifyMachines()
 	hp.sendServerStatus(true)
 }
 
-func (hp *HostPanel) handleConnectMachineClient(data DataConnectMachineClient) {
+func (hp *HostPanel) handleConnectMachineClient(data comms.DataConnectMachineClient) {
 	if hp.session == nil {
 		hp.chLog <- "Requested connect, but no server is running"
 		return
 	}
 
-	hp.session.connectMachineClient(data)
+	hp.session.ConnectMachineClient(data)
 	hp.sendServerStatus(true)
 }
 
-func (hp *HostPanel) handleDisconnectMachineClient(data DataDisconnectMachineClient) {
+func (hp *HostPanel) handleDisconnectMachineClient(data comms.DataDisconnectMachineClient) {
 	if hp.session == nil {
 		hp.chLog <- "Requested disconnect, but no server is running"
 		return
 	}
 
-	hp.session.disconnectMachineClient(data)
+	hp.session.DisconnectMachineClient(data)
 	hp.sendServerStatus(true)
 }
 
-func (hp *HostPanel) handleCloseMachine(data DataCloseMachine) {
+func (hp *HostPanel) handleCloseMachine(data comms.DataCloseMachine) {
 	if hp.session == nil {
 		hp.chLog <- "Requested close machine, but no server is running"
 		return
 	}
 
-	hp.session.closeMachine(data)
+	hp.session.CloseMachine(data)
 	hp.sendServerStatus(true)
 }
 
@@ -323,15 +326,19 @@ func (hp *HostPanel) sendServerStatus(resetTicker bool) {
 		hp.statusTicker.Reset(statusSendPeriod)
 	}
 
-	status := hp.session.getStatus()
-	err := hp.sendData(&status)
+	msg := comms.MsgServerStatus{
+		Type: "server-status",
+		Data: hp.session.GetStatus(),
+	}
+
+	err := hp.sendData(&msg)
 	if err != nil {
 		log.Println("read:", err)
 	}
 }
 
 func (hp *HostPanel) sendLog(message string) {
-	msg := Msg{Type: "log", Log: DataLog{Msg: message}}
+	msg := comms.Msg{Type: "log", Log: comms.DataLog{Msg: message}}
 	fmt.Printf("-> HOST PANEL: %s\n", message)
 
 	err := hp.sendData(&msg)

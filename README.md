@@ -121,10 +121,10 @@ You can connect a client-jukebox to a remote server, as you would a regular clie
 
 ### TODO
 
+- Remove machine / remove client from link table when closed.
+- Better gatekeeping of client 'lobby'.
 - Improve web panels.
 - Reintroduce NuSan Launcher.
-- Better gatekeeping of client 'lobby'.
-- TIC-80 version management
 - Authentication by key.
 - Clean close/open.
 - Messaging feature.
@@ -134,6 +134,7 @@ You can connect a client-jukebox to a remote server, as you would a regular clie
 
 ### Ideas / Later
 
+- TIC-80 version management.
 - LCDZ json builds. Add keyword tags?
 - Wrap WebSocket/Mutex in a class.
 - Pure proxy mode (to sit on a server and facilitate connections between clients without fixed ips).  

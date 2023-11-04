@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/rand"
 
-	"github.com/creativenucleus/bytejammer/server"
 	"github.com/google/uuid"
 )
 
@@ -33,7 +32,7 @@ func LaunchMachine(platform string, hasImport bool, hasExport bool, isServer boo
 	m := Machine{
 		Platform:    platform,
 		Uuid:        uuid.New(),
-		MachineName: server.GetFunName(len(MACHINES)),
+		MachineName: GetFunName(len(MACHINES)),
 	}
 
 	var err error

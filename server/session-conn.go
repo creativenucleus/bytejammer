@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/creativenucleus/bytejammer/comms"
 	"github.com/creativenucleus/bytejammer/embed"
 	"github.com/creativenucleus/bytejammer/machines"
 	"github.com/creativenucleus/bytejammer/util"
@@ -15,26 +16,26 @@ import (
 
 // JamSessionConn is a connection to the JamServer.
 // It may not not yet be validated, or have an identity.
-type JamSessionConn struct {
+type SessionConn struct {
 	conn           *websocket.Conn
 	connUuid       uuid.UUID
 	wsMutex        sync.Mutex
-	identity       *JamSessionConnIdentity
+	identity       *SessionConnIdentity
 	lastTicState   *machines.TicState
 	serverBasePath string
 	publicKey      []byte // This should be a public key type, and we should manage the challenge status
 	signalKick     chan bool
 }
 
-type JamSessionConnIdentity struct {
+type SessionConnIdentity struct {
 	uuid        uuid.UUID
 	displayName string
 	publicKey   []byte
 	isConfirmed bool
 }
 
-func NewJamSessionConnection(conn *websocket.Conn) *JamSessionConn {
-	client := JamSessionConn{
+func NewJamSessionConnection(conn *websocket.Conn) *SessionConn {
+	client := SessionConn{
 		conn:       conn,
 		connUuid:   uuid.New(),
 		signalKick: make(chan bool),
@@ -43,7 +44,7 @@ func NewJamSessionConnection(conn *websocket.Conn) *JamSessionConn {
 }
 
 // #TODO: make better
-func (jc *JamSessionConn) getIdentityShortUuid() string {
+func (jc *SessionConn) getIdentityShortUuid() string {
 	if jc.identity == nil {
 		return "(unknown)"
 	}
@@ -51,9 +52,9 @@ func (jc *JamSessionConn) getIdentityShortUuid() string {
 	return jc.identity.uuid.String()[0:8]
 }
 
-func (jc *JamSessionConn) runServerWsConnRead(js *JamSession) {
+func (jc *SessionConn) runServerWsConnRead(js *Session) {
 	for {
-		var msg Msg
+		var msg comms.Msg
 		err := jc.conn.ReadJSON(&msg)
 		if err != nil {
 			js.chLog <- fmt.Sprintln("read:", err)
@@ -69,7 +70,7 @@ func (jc *JamSessionConn) runServerWsConnRead(js *JamSession) {
 			}
 
 			// #TODO: NB This identity has not yet been challenged
-			jc.identity = &JamSessionConnIdentity{
+			jc.identity = &SessionConnIdentity{
 				uuid:        identityUuid,
 				displayName: msg.Identity.DisplayName,
 				publicKey:   msg.Identity.PublicKey,
@@ -89,7 +90,7 @@ func (jc *JamSessionConn) runServerWsConnRead(js *JamSession) {
 			}
 
 			// Send the challenge
-			msg := Msg{Type: "challenge-request", ChallengeRequest: DataChallengeRequest{Challenge: "This will be a random string!"}}
+			msg := comms.Msg{Type: "challenge-request", ChallengeRequest: comms.DataChallengeRequest{Challenge: "This will be a random string!"}}
 			err = jc.sendData(msg)
 			if err != nil {
 				js.chLog <- fmt.Sprintln("write:", err)
@@ -142,14 +143,14 @@ func (jc *JamSessionConn) runServerWsConnRead(js *JamSession) {
 	}
 }
 
-func (jc *JamSessionConn) runServerWsConnWrite(js *JamSession) {
+func (jc *SessionConn) runServerWsConnWrite(js *Session) {
 	for {
 		select {}
 	}
 }
 
 // TODO: Handle error
-func (js *JamSessionConn) sendMachineNameCode(machineName string) error {
+func (js *SessionConn) sendMachineNameCode(machineName string) error {
 	fmt.Printf("CLIENT RESET: %d\n", js.connUuid)
 
 	ts := machines.MakeTicStateRunning(embed.LuaClient)
@@ -159,12 +160,12 @@ func (js *JamSessionConn) sendMachineNameCode(machineName string) error {
 	})
 	ts.SetCode(code)
 
-	msg := Msg{Type: "tic-state", TicState: ts}
+	msg := comms.Msg{Type: "tic-state", TicState: ts}
 	err := js.sendData(msg)
 	return err
 }
 
-func (jc *JamSessionConn) sendData(data interface{}) error {
+func (jc *SessionConn) sendData(data interface{}) error {
 	jc.wsMutex.Lock()
 	defer jc.wsMutex.Unlock()
 	return jc.conn.WriteJSON(data)

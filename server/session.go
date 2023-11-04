@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"encoding/json"
@@ -8,13 +8,15 @@ import (
 	"os"
 	"time"
 
+	"github.com/creativenucleus/bytejammer/comms"
 	"github.com/creativenucleus/bytejammer/config"
 	"github.com/creativenucleus/bytejammer/machines"
 	"github.com/creativenucleus/bytejammer/util"
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 )
 
-type JamSession struct {
+type Session struct {
 	port int
 	// Our friendly name...
 	name string
@@ -23,24 +25,24 @@ type JamSession struct {
 	startTime time.Time
 
 	// The connections, machines, and the connections between them
-	manager *JamSessionManager
+	manager *SessionManager
 
 	chLog chan string
 }
 
-func startJamSession(port int, name string, chLog chan string) (*JamSession, error) {
+func CreateSession(port int, name string, chLog chan string) (*Session, error) {
 	nameSlug := util.GetSlug(name)
 	if nameSlug == "" {
 		return nil, errors.New("Invalid session name - unable to make slug")
 	}
 
 	now := time.Now()
-	js := JamSession{
+	js := Session{
 		port:      port,
 		name:      name,
-		slug:      fmt.Sprintf("%s_%s", nameSlug, util.GetSlugFromTime(now)),
+		slug:      fmt.Sprintf("%s_%s", util.GetSlugFromTime(now), nameSlug),
 		startTime: now,
-		manager:   makeJamSessionManager(),
+		manager:   makeSessionManager(),
 		chLog:     chLog,
 	}
 
@@ -51,7 +53,7 @@ func startJamSession(port int, name string, chLog chan string) (*JamSession, err
 		return nil, err
 	}
 
-	config := getJamSessionConfig(js)
+	config := getSessionConfig(js)
 	configData, err := json.Marshal(config)
 	if err != nil {
 		return nil, err
@@ -70,7 +72,7 @@ func startJamSession(port int, name string, chLog chan string) (*JamSession, err
 	return &js, nil
 }
 
-func (js *JamSession) start() error {
+func (js *Session) start() error {
 	js.chLog <- fmt.Sprintf("Starting server on port %d", js.port)
 
 	webServer := &http.Server{
@@ -86,74 +88,92 @@ func (js *JamSession) start() error {
 	return nil
 }
 
-func (js *JamSession) wsBytejam() func(http.ResponseWriter, *http.Request) {
+func (js *Session) wsBytejam() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		js.chLog <- fmt.Sprintf("Client connected")
 
-		conn, err := wsUpgrader.Upgrade(w, r, nil)
-		if err != nil {
-			js.chLog <- fmt.Sprintf("Client connected but couldn't upgrade: %s", err)
-			return
-		}
-		defer conn.Close()
+		err := comms.WsUpgrade(w, r, func(conn *websocket.Conn) error {
+			/*
+				var m *machines.Machine
+				if s.broadcaster != nil {
+								tic, err = machines.NewNusanServerTic(slug, broadcaster)
+								if err != nil {
+									log.Print("ERR new TIC:", err)
+									return
+								}
 
-		/*
-			var m *machines.Machine
-			if s.broadcaster != nil {
-							tic, err = machines.NewNusanServerTic(slug, broadcaster)
-							if err != nil {
-								log.Print("ERR new TIC:", err)
-								return
-							}
-
-				log.Print("not implemented")
-				return
-			} else {
-				m, err = machines.LaunchMachine("TIC-80", true, false, true)
-				if err != nil {
-					log.Print("ERR new TIC:", err)
+					log.Print("not implemented")
 					return
+				} else {
+					m, err = machines.LaunchMachine("TIC-80", true, false, true)
+					if err != nil {
+						log.Print("ERR new TIC:", err)
+						return
+					}
+
+					s.chLog <- "TIC-80 Launched"
 				}
+				defer m.Shutdown()
+			*/
 
-				s.chLog <- "TIC-80 Launched"
+			jsConn := NewJamSessionConnection(conn)
+			js.manager.registerConn(jsConn)
+
+			go jsConn.runServerWsConnRead(js)
+			go jsConn.runServerWsConnWrite(js)
+
+			// #TODO: send the server status
+			// hp.sendServerStatus(true)
+
+			// #TODO: handle exit
+			for {
+				select {
+				case <-jsConn.signalKick:
+					// #TODO: Close down read and write channels
+					fmt.Println("KICKED")
+					return nil
+				}
 			}
-			defer m.Shutdown()
-		*/
-
-		jsConn := NewJamSessionConnection(conn)
-		js.manager.registerConn(jsConn)
-
-		go jsConn.runServerWsConnRead(js)
-		go jsConn.runServerWsConnWrite(js)
-
-		// #TODO: send the server status
-		// hp.sendServerStatus(true)
-
-		// #TODO: handle exit
-		for {
-			select {
-			case <-jsConn.signalKick:
-				// #TODO: Close down read and write channels
-				fmt.Println("KICKED")
-				return
-			}
+		})
+		if err != nil {
+			js.chLog <- fmt.Sprintf("ws-upgrade: %w", err)
+			return
 		}
 	}
 }
 
-func (js *JamSession) stop() error {
+func (js *Session) Stop() error {
 	fmt.Println("JamSession->stop not yet implemented")
 	return nil
 }
 
-func (js *JamSession) getBasePath() string {
+func (js *Session) getBasePath() string {
 	return fmt.Sprintf("%sserver-data/%s", config.WORK_DIR, js.slug)
 }
 
-func (js *JamSession) getStatus() MsgServerStatus {
-	msg := MsgServerStatus{
-		Type: "server-status",
+type SessionStatus struct {
+	Clients []struct {
+		Uuid         string
+		DisplayName  string
+		ShortUuid    string
+		Status       string
+		MachineUuid  string
+		LastPingTime string
 	}
+	Machines []struct {
+		Uuid              string
+		MachineName       string
+		ProcessID         int
+		Platform          string
+		Status            string
+		ClientUuid        string
+		JammerDisplayName string
+		LastSnapshotTime  string
+	}
+}
+
+func (js *Session) GetStatus() SessionStatus {
+	ss := SessionStatus{}
 
 	for _, jc := range js.manager.conns {
 		status := "waiting"
@@ -164,7 +184,7 @@ func (js *JamSession) getStatus() MsgServerStatus {
 			machineUuid = machine.Uuid.String()
 		}
 
-		msg.Data.Clients = append(msg.Data.Clients, struct {
+		ss.Clients = append(ss.Clients, struct {
 			Uuid         string
 			DisplayName  string
 			ShortUuid    string
@@ -190,7 +210,7 @@ func (js *JamSession) getStatus() MsgServerStatus {
 			clientUuid = client.connUuid.String()
 		}
 
-		msg.Data.Machines = append(msg.Data.Machines, struct {
+		ss.Machines = append(ss.Machines, struct {
 			Uuid              string
 			MachineName       string
 			ProcessID         int
@@ -211,10 +231,10 @@ func (js *JamSession) getStatus() MsgServerStatus {
 		})
 	}
 
-	return msg
+	return ss
 }
 
-func (js *JamSession) startMachine() (*machines.Machine, error) {
+func (js *Session) StartMachine() (*machines.Machine, error) {
 	m, err := machines.LaunchMachine("TIC-80", true, true, false)
 	if err != nil {
 		return nil, err
@@ -226,7 +246,7 @@ func (js *JamSession) startMachine() (*machines.Machine, error) {
 	return m, err
 }
 
-func (js *JamSession) startMachineForConn(connUuid uuid.UUID) (*machines.Machine, error) {
+func (js *Session) StartMachineForConn(connUuid uuid.UUID) (*machines.Machine, error) {
 	conn := js.manager.getConn(connUuid)
 	if conn == nil {
 		return nil, errors.New("Unable to find conn")
@@ -245,7 +265,7 @@ func (js *JamSession) startMachineForConn(connUuid uuid.UUID) (*machines.Machine
 	return m, err
 }
 
-func (js *JamSession) identifyMachines() {
+func (js *Session) IdentifyMachines() {
 	count := 0
 	for _, c := range js.manager.conns {
 		m := js.manager.getMachineForConn(c)
@@ -261,7 +281,7 @@ func (js *JamSession) identifyMachines() {
 	js.chLog <- fmt.Sprintf("Identification sent to %d machines for 30 seconds", count)
 }
 
-func (js *JamSession) closeMachine(data DataCloseMachine) {
+func (js *Session) CloseMachine(data comms.DataCloseMachine) {
 	// #TODO: unlink and unregister!
 
 	fmt.Printf("CLOSE: %s\n", data.Uuid)
@@ -274,7 +294,7 @@ func (js *JamSession) closeMachine(data DataCloseMachine) {
 	js.chLog <- fmt.Sprintf("Machine %s closed", data.Uuid)
 }
 
-func (js *JamSession) connectMachineClient(data DataConnectMachineClient) {
+func (js *Session) ConnectMachineClient(data comms.DataConnectMachineClient) {
 	fmt.Printf("connect: %s to %s\n", data.ClientUuid, data.MachineUuid)
 
 	machineUuid, err := uuid.Parse(data.MachineUuid)
@@ -306,7 +326,7 @@ func (js *JamSession) connectMachineClient(data DataConnectMachineClient) {
 	js.chLog <- fmt.Sprintf("Connected %s to %s", data.ClientUuid, data.MachineUuid)
 }
 
-func (js *JamSession) disconnectMachineClient(data DataDisconnectMachineClient) {
+func (js *Session) DisconnectMachineClient(data comms.DataDisconnectMachineClient) {
 	fmt.Printf("Disconnect: %s to %s\n", data.ClientUuid, data.MachineUuid)
 
 	machineUuid, err := uuid.Parse(data.MachineUuid)

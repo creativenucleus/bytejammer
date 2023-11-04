@@ -5,13 +5,14 @@ import (
 	"log"
 	"time"
 
+	"github.com/creativenucleus/bytejammer/comms"
 	"github.com/creativenucleus/bytejammer/machines"
 )
 
 func startLocalJukebox(playlist *Playlist, playtime time.Duration) error {
 	fmt.Printf("Starting local jukebox containing %d items\n", len(playlist.items))
 
-	ch := make(chan Msg)
+	ch := make(chan comms.Msg)
 
 	j, err := NewJukebox(playlist, playtime, &ch)
 	if err != nil {
@@ -32,7 +33,7 @@ func startLocalJukebox(playlist *Playlist, playtime time.Duration) error {
 				if ok {
 					switch msg.Type {
 					case "tic-state":
-						err = m.Tic.WriteImportCode(msg.TicState)
+						err = m.Tic.WriteImportCode(msg.TicState.TicState)
 						if err != nil {
 							// #TODO: soften!
 							log.Fatal(err)

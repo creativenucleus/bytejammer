@@ -3,12 +3,11 @@ package main
 import (
 	"log"
 	"time"
-
 	"github.com/creativenucleus/bytejammer/comms"
 )
 
 func startClientJukebox(host string, port int, playtime time.Duration, playlist *Playlist) error {
-	ch := make(chan Msg)
+	ch := make(chan comms.Msg)
 	j, err := NewJukebox(playlist, playtime, &ch)
 	if err != nil {
 		return err
@@ -28,7 +27,7 @@ func startClientJukebox(host string, port int, playtime time.Duration, playlist 
 					switch msg.Type {
 					case "tic-state":
 						// #TODO: line endings for data? UTF-8?
-						msg := Msg{Type: "tic-state", TicState: msg.TicState}
+						msg := comms.Msg{Type: "tic-state", TicState: msg.TicState}
 						err = ws.sendData(msg)
 						if err != nil {
 							// #TODO: soften!

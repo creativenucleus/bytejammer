@@ -7,14 +7,15 @@ import (
 	"path/filepath"
 
 	"github.com/creativenucleus/bytejammer/config"
+	"github.com/creativenucleus/bytejammer/crypto"
 	"github.com/creativenucleus/bytejammer/util"
 	"github.com/google/uuid"
 )
 
 type Identity struct {
-	Uuid        uuid.UUID      `json:"uuid"`
-	DisplayName string         `json:"displayName"`
-	Crypto      *CryptoPrivate `json:"crypto"`
+	Uuid        uuid.UUID             `json:"uuid"`
+	DisplayName string                `json:"displayName"`
+	Crypto      *crypto.CryptoPrivate `json:"crypto"`
 }
 
 // For storage?: hex.EncodeString, hex.DecodeString
@@ -26,7 +27,7 @@ func makeIdentity(displayName string) error {
 		return err
 	}
 
-	c, err := newCryptoPrivate()
+	c, err := crypto.NewCryptoPrivate()
 	if err != nil {
 		return err
 	}
