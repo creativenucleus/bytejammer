@@ -110,7 +110,9 @@ func (cws *ClientWS) handleChallengeRequest(challenge string, identity *Identity
 		return err
 	}
 
-	cws.chMsg <- comms.Msg{Type: "challenge-response", ChallengeResponse: comms.DataChallengeResponse{Challenge: fmt.Sprintf("%x", signed)}}
+	cws.chMsg <- comms.Msg{Type: "challenge-response", ChallengeResponse: comms.DataChallengeResponse{
+		Challenge: fmt.Sprintf("%x", signed),
+	}}
 
 	return nil
 }

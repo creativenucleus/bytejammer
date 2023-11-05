@@ -1,12 +1,14 @@
 package server
 
 import (
+	"encoding/hex"
 	"fmt"
 	"os"
 	"sync"
 	"time"
 
 	"github.com/creativenucleus/bytejammer/comms"
+	"github.com/creativenucleus/bytejammer/crypto"
 	"github.com/creativenucleus/bytejammer/embed"
 	"github.com/creativenucleus/bytejammer/machines"
 	"github.com/creativenucleus/bytejammer/util"
@@ -32,6 +34,7 @@ type SessionConnIdentity struct {
 	displayName string
 	publicKey   []byte
 	isConfirmed bool
+	challenge   []byte
 }
 
 func NewJamSessionConnection(conn *websocket.Conn) *SessionConn {
@@ -75,6 +78,7 @@ func (jc *SessionConn) runServerWsConnRead(js *Session) {
 				displayName: msg.Identity.DisplayName,
 				publicKey:   msg.Identity.PublicKey,
 				isConfirmed: false,
+				challenge:   util.GetRandomBytes(32),
 			}
 
 			// See whether the identity / public key matches our known one
@@ -90,18 +94,43 @@ func (jc *SessionConn) runServerWsConnRead(js *Session) {
 			}
 
 			// Send the challenge
-			msg := comms.Msg{Type: "challenge-request", ChallengeRequest: comms.DataChallengeRequest{Challenge: "This will be a random string!"}}
+			msg := comms.Msg{Type: "challenge-request", ChallengeRequest: comms.DataChallengeRequest{
+				Challenge: fmt.Sprintf("%x", jc.identity.challenge),
+			}}
 			err = jc.sendData(msg)
 			if err != nil {
 				js.chLog <- fmt.Sprintln("write:", err)
 			}
 
 		case "challenge-response":
+			signed, err := hex.DecodeString(msg.ChallengeResponse.Challenge)
+			if err != nil {
+				js.chLog <- fmt.Sprintln("write:", err)
+				return
+			}
+
+			cryptoPub, err := crypto.NewCryptoPublicFromPem(jc.identity.publicKey)
+			if err != nil {
+				js.chLog <- fmt.Sprintln("write:", err)
+				return
+			}
+
+			isValid := cryptoPub.VerifySigned(jc.identity.challenge, signed)
+			if err != nil {
+				js.chLog <- fmt.Sprintln("write:", err)
+				return
+			}
+
+			if !isValid {
+				js.chLog <- fmt.Sprintln("IS NOT VALID")
+				return
+			}
+
 			// #TODO: Match identity to any existing (fallen) clients, and stitch together
 			// Do two live clients match identity uuid?! What now?
 			// Check public key matches known one
 
-			fmt.Println(msg.ChallengeResponse.Challenge)
+			js.chLog <- fmt.Sprintln("IS VALID!")
 
 		case "tic-state":
 			ts := msg.TicState.State
@@ -151,8 +180,6 @@ func (jc *SessionConn) runServerWsConnWrite(js *Session) {
 
 // TODO: Handle error
 func (js *SessionConn) sendMachineNameCode(machineName string) error {
-	fmt.Printf("CLIENT RESET: %d\n", js.connUuid)
-
 	ts := machines.MakeTicStateRunning(embed.LuaClient)
 	code := machines.CodeReplace(ts.GetCode(), map[string]string{
 		"CLIENT_ID":    machineName,

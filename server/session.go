@@ -37,6 +37,7 @@ func CreateSession(port int, name string, chLog chan string) (*Session, error) {
 	}
 
 	now := time.Now()
+
 	js := Session{
 		port:        port,
 		name:        name,
