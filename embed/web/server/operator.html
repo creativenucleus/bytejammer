@@ -189,8 +189,9 @@
                     conn.onmessage = (evt) => {
                         const msg = JSON.parse(evt.data);
                         switch(msg.type) {
-                            case "server-status":
-                                handleMsgServerStatus(msg.data);
+                            case "session-status":
+                                console.log(msg)
+                                handleMsgServerStatus(msg['session-status']);
                                 break;
 
                             case "log":

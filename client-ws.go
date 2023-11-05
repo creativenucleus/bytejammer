@@ -20,8 +20,8 @@ type ClientWS struct {
 	basepath string
 }
 
-func startClientServerConn(host string, port int, identity *Identity, chServerStatus chan comms.DataClientServerStatus) error {
-	chServerStatus <- comms.DataClientServerStatus{IsConnected: false}
+func startClientServerConn(host string, port int, identity *Identity, chServerStatus chan comms.DataClientStatus) error {
+	chServerStatus <- comms.DataClientStatus{IsConnected: false}
 	cws := ClientWS{
 		chMsg: make(chan comms.Msg),
 	}
@@ -48,7 +48,7 @@ func startClientServerConn(host string, port int, identity *Identity, chServerSt
 		break
 	}
 	defer cws.ws.Close()
-	chServerStatus <- comms.DataClientServerStatus{IsConnected: true}
+	chServerStatus <- comms.DataClientStatus{IsConnected: true}
 
 	m, err := machines.LaunchMachine("TIC-80", true, true, false)
 	if err != nil {
@@ -171,7 +171,9 @@ func (cws *ClientWS) clientWsWriter(tic *machines.Tic, identity *Identity) {
 			}
 
 			// #TODO: line endings for data? UTF-8?
-			msg := comms.Msg{Type: "tic-state", TicState: *ticState}
+			msg := comms.Msg{Type: "tic-state", TicState: comms.DataTicState{
+				State: *ticState,
+			}}
 			err = cws.ws.sendData(msg)
 			if err != nil {
 				log.Fatal(err)

@@ -324,9 +324,9 @@ func (hp *HostPanel) sendServerStatus(resetTicker bool) {
 		hp.statusTicker.Reset(statusSendPeriod)
 	}
 
-	msg := comms.MsgServerStatus{
-		Type: "server-status",
-		Data: hp.session.GetStatus(),
+	msg := comms.Msg{
+		Type:          "session-status",
+		SessionStatus: hp.session.GetStatus(),
 	}
 
 	err := hp.sendData(&msg)

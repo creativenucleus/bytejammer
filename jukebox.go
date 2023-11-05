@@ -39,7 +39,9 @@ func (j *Jukebox) start() {
 		})
 		tsFirst.SetCode(code)
 
-		(*j.comms) <- comms.Msg{Type: "tic-state", TicState: tsFirst}
+		(*j.comms) <- comms.Msg{Type: "tic-state", TicState: comms.DataTicState{
+			State: tsFirst,
+		}}
 
 		rotateTicker := time.NewTicker(rotatePeriod)
 		defer rotateTicker.Stop()
@@ -72,7 +74,9 @@ func (j *Jukebox) start() {
 				*/
 
 				ts := machines.MakeTicStateRunning(code)
-				(*j.comms) <- comms.Msg{Type: "tic-state", TicState: ts}
+				(*j.comms) <- comms.Msg{Type: "tic-state", TicState: comms.DataTicState{
+					State: ts,
+				}}
 			}
 		}
 	}()

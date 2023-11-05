@@ -28,7 +28,7 @@ const (
 
 type ClientPanel struct {
 	// #TODO: lock down to receiver only
-	chSendServerStatus chan comms.DataClientServerStatus
+	chSendClientStatus chan comms.DataClientStatus
 	wsClient           *websocket.Conn
 	wsMutex            sync.Mutex
 }
@@ -51,7 +51,7 @@ func startClientPanel(port int) error {
 	fmt.Printf("In a web browser, go to http://localhost:%d/%s\n", port, session)
 
 	cp := ClientPanel{
-		chSendServerStatus: make(chan comms.DataClientServerStatus),
+		chSendClientStatus: make(chan comms.DataClientStatus),
 	}
 	http.HandleFunc(fmt.Sprintf("/%s", session), cp.webClientIndex)
 	http.HandleFunc(fmt.Sprintf("/%s/api/identity.json", session), cp.webClientApiIdentityJSON)
@@ -113,7 +113,7 @@ func (cp *ClientPanel) webClientApiIdentityJSON(w http.ResponseWriter, r *http.R
 func (cp *ClientPanel) webClientApiJoinServerJSON(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "POST":
-		cp.chSendServerStatus <- comms.DataClientServerStatus{IsConnected: false}
+		cp.chSendClientStatus <- comms.DataClientStatus{IsConnected: false}
 
 		// #TODO: Cleaner way to do this?
 		type reqType struct {
@@ -142,7 +142,7 @@ func (cp *ClientPanel) webClientApiJoinServerJSON(w http.ResponseWriter, r *http
 			return
 		}
 
-		err = startClientServerConn(req.Host, port, identity, cp.chSendServerStatus)
+		err = startClientServerConn(req.Host, port, identity, cp.chSendClientStatus)
 		if err != nil {
 			apiOutErr(w, err, http.StatusInternalServerError)
 			return
@@ -208,8 +208,8 @@ func (cp *ClientPanel) wsWrite() {
 		//		case <-statusTicker.C:
 		//			fmt.Println("TICKER!")
 
-		case status := <-cp.chSendServerStatus:
-			msg := comms.Msg{Type: "server-status", ServerStatus: status}
+		case status := <-cp.chSendClientStatus:
+			msg := comms.Msg{Type: "client-status", ClientStatus: status}
 			err := cp.sendData(&msg)
 			if err != nil {
 				// #TODO: relax

@@ -25,7 +25,7 @@ type Session struct {
 	startTime time.Time
 
 	// The connections, machines, and the connections between them
-	manager *SessionManager
+	switchboard *Switchboard
 
 	chLog chan string
 }
@@ -38,12 +38,12 @@ func CreateSession(port int, name string, chLog chan string) (*Session, error) {
 
 	now := time.Now()
 	js := Session{
-		port:      port,
-		name:      name,
-		slug:      fmt.Sprintf("%s_%s", util.GetSlugFromTime(now), nameSlug),
-		startTime: now,
-		manager:   makeSessionManager(),
-		chLog:     chLog,
+		port:        port,
+		name:        name,
+		slug:        fmt.Sprintf("%s_%s", util.GetSlugFromTime(now), nameSlug),
+		startTime:   now,
+		switchboard: makeSwitchboard(),
+		chLog:       chLog,
 	}
 
 	basePath := js.getBasePath()
@@ -53,13 +53,7 @@ func CreateSession(port int, name string, chLog chan string) (*Session, error) {
 		return nil, err
 	}
 
-	config := getSessionConfig(js)
-	configData, err := json.Marshal(config)
-	if err != nil {
-		return nil, err
-	}
-
-	err = os.WriteFile(fmt.Sprintf("%s/config.json", basePath), configData, 0644)
+	err = js.writeConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +63,35 @@ func CreateSession(port int, name string, chLog chan string) (*Session, error) {
 		return nil, err
 	}
 
+	// Periodic saving...
+	// #TODO: (There must be a bad pattern!)
+	go func() {
+		for {
+			time.Sleep(10 * time.Second)
+			err := js.writeConfig()
+			if err != nil {
+				chLog <- fmt.Sprintf("ERR save config: %s", err)
+			}
+		}
+	}()
+
 	return &js, nil
+}
+
+func (js *Session) writeConfig() error {
+	config := getSessionConfig(*js)
+	configData, err := json.Marshal(config)
+	if err != nil {
+		return err
+	}
+
+	filepath := fmt.Sprintf("%s/config.json", js.getBasePath())
+	err = os.WriteFile(filepath, configData, 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (js *Session) start() error {
@@ -117,7 +139,7 @@ func (js *Session) wsBytejam() func(http.ResponseWriter, *http.Request) {
 			*/
 
 			jsConn := NewJamSessionConnection(conn)
-			js.manager.registerConn(jsConn)
+			js.switchboard.registerConn(jsConn)
 
 			go jsConn.runServerWsConnRead(js)
 			go jsConn.runServerWsConnWrite(js)
@@ -151,34 +173,13 @@ func (js *Session) getBasePath() string {
 	return fmt.Sprintf("%sserver-data/%s", config.WORK_DIR, js.slug)
 }
 
-type SessionStatus struct {
-	Clients []struct {
-		Uuid         string
-		DisplayName  string
-		ShortUuid    string
-		Status       string
-		MachineUuid  string
-		LastPingTime string
-	}
-	Machines []struct {
-		Uuid              string
-		MachineName       string
-		ProcessID         int
-		Platform          string
-		Status            string
-		ClientUuid        string
-		JammerDisplayName string
-		LastSnapshotTime  string
-	}
-}
+func (js *Session) GetStatus() comms.DataSessionStatus {
+	ss := comms.DataSessionStatus{}
 
-func (js *Session) GetStatus() SessionStatus {
-	ss := SessionStatus{}
-
-	for _, jc := range js.manager.conns {
+	for _, jc := range js.switchboard.conns {
 		status := "waiting"
 		machineUuid := ""
-		machine := js.manager.getMachineForConn(jc)
+		machine := js.switchboard.getMachineForConn(jc)
 		if machine != nil {
 			status = fmt.Sprintf("Connected: %s", machine.MachineName)
 			machineUuid = machine.Uuid.String()
@@ -201,10 +202,10 @@ func (js *Session) GetStatus() SessionStatus {
 		})
 	}
 
-	for _, m := range js.manager.machines {
+	for _, m := range js.switchboard.machines {
 		name := "(unassigned)"
 		clientUuid := ""
-		client := js.manager.getConnForMachine(m)
+		client := js.switchboard.getConnForMachine(m)
 		if client != nil {
 			name = client.identity.displayName
 			clientUuid = client.connUuid.String()
@@ -240,14 +241,14 @@ func (js *Session) StartMachine() (*machines.Machine, error) {
 		return nil, err
 	}
 
-	js.manager.registerMachine(m)
+	js.switchboard.registerMachine(m)
 
 	js.chLog <- fmt.Sprintf("TIC-80 Launched: %s", m.MachineName)
 	return m, err
 }
 
 func (js *Session) StartMachineForConn(connUuid uuid.UUID) (*machines.Machine, error) {
-	conn := js.manager.getConn(connUuid)
+	conn := js.switchboard.getConn(connUuid)
 	if conn == nil {
 		return nil, errors.New("Unable to find conn")
 	}
@@ -257,8 +258,8 @@ func (js *Session) StartMachineForConn(connUuid uuid.UUID) (*machines.Machine, e
 		return nil, err
 	}
 
-	js.manager.registerMachine(m)
-	js.manager.linkMachineToConn(m.Uuid, conn.connUuid)
+	js.switchboard.registerMachine(m)
+	js.switchboard.linkMachineToConn(m.Uuid, conn.connUuid)
 
 	// TODO: May have identity?
 	js.chLog <- fmt.Sprintf("TIC-80 Launched: %s for %s", m.MachineName, conn.connUuid)
@@ -267,8 +268,8 @@ func (js *Session) StartMachineForConn(connUuid uuid.UUID) (*machines.Machine, e
 
 func (js *Session) IdentifyMachines() {
 	count := 0
-	for _, c := range js.manager.conns {
-		m := js.manager.getMachineForConn(c)
+	for _, c := range js.switchboard.conns {
+		m := js.switchboard.getMachineForConn(c)
 		if m != nil {
 			err := c.sendMachineNameCode(m.MachineName)
 			if err != nil {
@@ -315,13 +316,13 @@ func (js *Session) ConnectMachineClient(data comms.DataConnectMachineClient) {
 		return
 	}
 
-	conn := js.manager.getConn(connUuid)
+	conn := js.switchboard.getConn(connUuid)
 	if conn == nil {
 		js.chLog <- fmt.Sprintf("ERR connect: Could not find Jammer ID")
 		return
 	}
 
-	js.manager.linkMachineToConn(machineUuid, connUuid)
+	js.switchboard.linkMachineToConn(machineUuid, connUuid)
 
 	js.chLog <- fmt.Sprintf("Connected %s to %s", data.ClientUuid, data.MachineUuid)
 }
@@ -341,13 +342,13 @@ func (js *Session) DisconnectMachineClient(data comms.DataDisconnectMachineClien
 		return
 	}
 
-	conn := js.manager.getConn(connUuid)
+	conn := js.switchboard.getConn(connUuid)
 	if conn == nil {
 		js.chLog <- fmt.Sprintf("ERR connect: Could not find Jammer ID")
 		return
 	}
 
-	machine := js.manager.getMachineForConn(conn)
+	machine := js.switchboard.getMachineForConn(conn)
 	if machine == nil {
 		js.chLog <- fmt.Sprintf("ERR connect: Jammer does not have a machine")
 	}
@@ -356,7 +357,7 @@ func (js *Session) DisconnectMachineClient(data comms.DataDisconnectMachineClien
 		js.chLog <- fmt.Sprintf("ERR connect: Jammer's machine ID does not match the requested one")
 	}
 
-	js.manager.unlinkMachineFromConn(machineUuid, connUuid)
+	js.switchboard.unlinkMachineFromConn(machineUuid, connUuid)
 
 	js.chLog <- fmt.Sprintf("Disconnected %s from %s", data.ClientUuid, data.MachineUuid)
 }

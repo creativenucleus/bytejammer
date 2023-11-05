@@ -82,10 +82,10 @@ func (jc *SessionConn) runServerWsConnRead(js *Session) {
 
 			// #TODO: Refactor this placeholder!
 			// Kick an existing connection off if it has the same identity
-			for _, c := range js.manager.conns {
+			for _, c := range js.switchboard.conns {
 				if c != jc && c.identity != nil && c.identity.uuid.String() == jc.identity.uuid.String() {
 					c.signalKick <- true
-					js.manager.unregisterConn(c)
+					js.switchboard.unregisterConn(c)
 				}
 			}
 
@@ -104,7 +104,7 @@ func (jc *SessionConn) runServerWsConnRead(js *Session) {
 			fmt.Println(msg.ChallengeResponse.Challenge)
 
 		case "tic-state":
-			ts := msg.TicState
+			ts := msg.TicState.State
 
 			if jc.lastTicState != nil && ts.IsEqual(*jc.lastTicState) {
 				// We already sent this state
@@ -118,7 +118,7 @@ func (jc *SessionConn) runServerWsConnRead(js *Session) {
 				os.WriteFile(path, []byte(ts.GetCode()), 0644)
 			}
 
-			machine := js.manager.getMachineForConn(jc)
+			machine := js.switchboard.getMachineForConn(jc)
 			if machine != nil && machine.Tic != nil {
 				// Output to Tic
 				// Don't shim for now...
@@ -160,7 +160,9 @@ func (js *SessionConn) sendMachineNameCode(machineName string) error {
 	})
 	ts.SetCode(code)
 
-	msg := comms.Msg{Type: "tic-state", TicState: ts}
+	msg := comms.Msg{Type: "tic-state", TicState: comms.DataTicState{
+		State: ts,
+	}}
 	err := js.sendData(msg)
 	return err
 }
