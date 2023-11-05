@@ -45,12 +45,12 @@ It can be provided with a JSON file playlist (from remote and local) or .zip fil
 JSON file should be formated like 
 ```JSON
 {
-    "title": "TIC-80 selectec works",
+    "title": "TIC-80 selected works",
     "description": "(with FFT)",
     "items": [
         {
             "location": "https://livecode.demozoo.org/shader_file_sources/2023_05_15_byte_jam_monday_night_bytes/nusan.lua",
-            "author": "Nusan ", 
+            "author": "Nusan", 
             "description": "FieldFX Byte Jam - 15/05/2023",
             "playtime": 30
         }

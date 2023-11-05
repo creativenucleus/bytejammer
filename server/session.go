@@ -33,7 +33,7 @@ type Session struct {
 func CreateSession(port int, name string, chLog chan string) (*Session, error) {
 	nameSlug := util.GetSlug(name)
 	if nameSlug == "" {
-		return nil, errors.New("Invalid session name - unable to make slug")
+		return nil, errors.New("invalid session name - unable to make slug")
 	}
 
 	now := time.Now()
@@ -113,7 +113,7 @@ func (js *Session) start() error {
 
 func (js *Session) wsBytejam() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		js.chLog <- fmt.Sprintf("Client connected")
+		js.chLog <- "Client connected"
 
 		err := comms.WsUpgrade(w, r, func(conn *websocket.Conn) error {
 			/*
@@ -150,16 +150,14 @@ func (js *Session) wsBytejam() func(http.ResponseWriter, *http.Request) {
 
 			// #TODO: handle exit
 			for {
-				select {
-				case <-jsConn.signalKick:
-					// #TODO: Close down read and write channels
-					fmt.Println("KICKED")
-					return nil
-				}
+				<-jsConn.signalKick
+				// #TODO: Close down read and write channels
+				fmt.Println("KICKED")
+				return nil
 			}
 		})
 		if err != nil {
-			js.chLog <- fmt.Sprintf("ws-upgrade: %w", err)
+			js.chLog <- fmt.Sprintf("ws-upgrade: %s", err)
 			return
 		}
 	}
@@ -251,7 +249,7 @@ func (js *Session) StartMachine() (*machines.Machine, error) {
 func (js *Session) StartMachineForConn(connUuid uuid.UUID) (*machines.Machine, error) {
 	conn := js.switchboard.getConn(connUuid)
 	if conn == nil {
-		return nil, errors.New("Unable to find conn")
+		return nil, errors.New("unable to find conn")
 	}
 
 	m, err := machines.LaunchMachine("TIC-80", true, true, false)
@@ -313,13 +311,13 @@ func (js *Session) ConnectMachineClient(data comms.DataConnectMachineClient) {
 
 	machine := machines.GetMachine(machineUuid)
 	if machine == nil {
-		js.chLog <- fmt.Sprintf("ERR connect: Could not find Machine ID")
+		js.chLog <- "ERR connect: Could not find Machine ID"
 		return
 	}
 
 	conn := js.switchboard.getConn(connUuid)
 	if conn == nil {
-		js.chLog <- fmt.Sprintf("ERR connect: Could not find Jammer ID")
+		js.chLog <- "ERR connect: Could not find Jammer ID"
 		return
 	}
 
@@ -345,17 +343,17 @@ func (js *Session) DisconnectMachineClient(data comms.DataDisconnectMachineClien
 
 	conn := js.switchboard.getConn(connUuid)
 	if conn == nil {
-		js.chLog <- fmt.Sprintf("ERR connect: Could not find Jammer ID")
+		js.chLog <- "ERR connect: Could not find Jammer ID"
 		return
 	}
 
 	machine := js.switchboard.getMachineForConn(conn)
 	if machine == nil {
-		js.chLog <- fmt.Sprintf("ERR connect: Jammer does not have a machine")
+		js.chLog <- "ERR connect: Jammer does not have a machine"
 	}
 
 	if machine.Uuid != machineUuid {
-		js.chLog <- fmt.Sprintf("ERR connect: Jammer's machine ID does not match the requested one")
+		js.chLog <- "ERR connect: Jammer's machine ID does not match the requested one"
 	}
 
 	js.switchboard.unlinkMachineFromConn(machineUuid, connUuid)

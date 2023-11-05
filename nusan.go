@@ -90,16 +90,14 @@ type NusanLauncherMsg struct {
 
 func (nl *NusanLauncher) nusanWsOperatorWrite() {
 	for {
-		select {
-		case msg := <-(*nl.ch):
-			fmt.Printf("-> NUSAN TOSEND: %v\n", msg)
-			nlMsg := NusanLauncherMsg{}
-			nlMsg.Data.RoomName = "bytejammer"
-			nlMsg.Data.NickName = msg
-			err := nl.sendData(&nlMsg)
-			if err != nil {
-				log.Fatal(err)
-			}
+		msg := <-(*nl.ch)
+		fmt.Printf("-> NUSAN TOSEND: %v\n", msg)
+		nlMsg := NusanLauncherMsg{}
+		nlMsg.Data.RoomName = "bytejammer"
+		nlMsg.Data.NickName = msg
+		err := nl.sendData(&nlMsg)
+		if err != nil {
+			log.Fatal(err)
 		}
 	}
 }

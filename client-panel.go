@@ -106,7 +106,7 @@ func (cp *ClientPanel) webClientApiIdentityJSON(w http.ResponseWriter, r *http.R
 		apiOutResponse(w, nil, http.StatusCreated)
 
 	default:
-		apiOutErr(w, errors.New("Method not allowed"), http.StatusMethodNotAllowed)
+		apiOutErr(w, fmt.Errorf("method not allowed"), http.StatusMethodNotAllowed)
 	}
 }
 
@@ -150,7 +150,7 @@ func (cp *ClientPanel) webClientApiJoinServerJSON(w http.ResponseWriter, r *http
 		apiOutResponse(w, nil, http.StatusCreated)
 
 	default:
-		apiOutErr(w, errors.New("Method not allowed"), http.StatusMethodNotAllowed)
+		apiOutErr(w, errors.New("method not allowed"), http.StatusMethodNotAllowed)
 	}
 }
 
@@ -168,8 +168,6 @@ func (cp *ClientPanel) wsWebClient() func(http.ResponseWriter, *http.Request) {
 			// #TODO: handle exit
 			for {
 			}
-
-			return nil
 		})
 		if err != nil {
 			log.Print("upgrade:", err)
@@ -202,19 +200,12 @@ func (cp *ClientPanel) wsWrite() {
 		}()
 	*/
 	for {
-		select {
-		//		case <-done:
-		//			return
-		//		case <-statusTicker.C:
-		//			fmt.Println("TICKER!")
-
-		case status := <-cp.chSendClientStatus:
-			msg := comms.Msg{Type: "client-status", ClientStatus: status}
-			err := cp.sendData(&msg)
-			if err != nil {
-				// #TODO: relax
-				log.Fatal(err)
-			}
+		status := <-cp.chSendClientStatus
+		msg := comms.Msg{Type: "client-status", ClientStatus: status}
+		err := cp.sendData(&msg)
+		if err != nil {
+			// #TODO: relax
+			log.Fatal(err)
 		}
 	}
 }

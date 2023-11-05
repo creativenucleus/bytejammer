@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	RELEASE_TITLE = "Appealing Apricot"
+	RELEASE_TITLE         = "Appealing Apricot"
+	JUKEBOX_PLAYTIME_SECS = 10
 )
 
 func main() {
@@ -58,22 +59,24 @@ func main() {
 						Name:  "playlist",
 						Usage: "Playlist file (empty for LCDZ playlist)",
 					},
-					&cli.StringFlag{
+					&cli.UintFlag{
 						Name:  "playtime",
-						Usage: "Playtime for each item, default 7 sec",
+						Usage: "Playtime for each item (in seconds)",
+						Value: JUKEBOX_PLAYTIME_SECS,
 					},
 				},
 				Action: func(cCtx *cli.Context) error {
-					var_playtime := cCtx.Uint("playtime")
-					fmt.Printf("default playtime is %d\n", var_playtime)
-					var playtime = time.Duration(var_playtime) * time.Second
+					defaultPlaytime := cCtx.Uint("playtime")
+					if defaultPlaytime == 0 {
+						defaultPlaytime = JUKEBOX_PLAYTIME_SECS
+					}
 
 					playlistFilename := cCtx.String("playlist")
 					playlist, err := readPlaylist(playlistFilename)
 					if err != nil {
 						log.Fatal(err)
 					}
-					err = startLocalJukebox(playlist, playtime)
+					err = startLocalJukebox(playlist, time.Duration(defaultPlaytime)*time.Second)
 					if err != nil {
 						log.Fatal(err)
 					}
@@ -153,15 +156,17 @@ func main() {
 						Name:  "playlist",
 						Usage: "Playlist file (empty for LCDZ playlist)",
 					},
-					&cli.StringFlag{
+					&cli.UintFlag{
 						Name:  "playtime",
-						Usage: "Playtime for each item, default 7 sec",
+						Usage: "Playtime for each item (in seconds)",
+						Value: JUKEBOX_PLAYTIME_SECS,
 					},
 				},
 				Action: func(cCtx *cli.Context) error {
-					var_playtime := cCtx.Uint("playtime")
-					fmt.Printf("default playtime is %d\n", var_playtime)
-					var playtime = time.Duration(var_playtime) * time.Second
+					defaultPlaytime := cCtx.Uint("playtime")
+					if defaultPlaytime == 0 {
+						defaultPlaytime = JUKEBOX_PLAYTIME_SECS
+					}
 
 					host := cCtx.String("host")
 					port := cCtx.Int("port")
@@ -171,7 +176,7 @@ func main() {
 						log.Fatal(err)
 					}
 
-					err = startClientJukebox(host, port, playtime, playlist)
+					err = startClientJukebox(host, port, time.Duration(defaultPlaytime)*time.Second, playlist)
 					if err != nil {
 						log.Fatal(err)
 					}

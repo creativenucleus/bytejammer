@@ -21,7 +21,7 @@ type Jukebox struct {
 }
 
 func NewJukebox(playlist *Playlist, playtime time.Duration, comms *chan comms.Msg) (*Jukebox, error) {
-	log.Printf("-> Launching Jukebox for playlist")
+	log.Printf("-> Launching Jukebox for playlist, with default playtime of %s", playtime)
 
 	j := Jukebox{
 		comms:    comms,
@@ -49,53 +49,43 @@ func (j *Jukebox) start() {
 		defer rotateTicker.Stop()
 
 		for {
-			select {
-			case <-rotateTicker.C:
-				playlistItem, err := j.playlist.getNext()
-				if err != nil {
-					log.Println("ERR get code:", err)
-					break
-				}
-
-				fmt.Printf("Playing (TIC):\nLocation: %s\n", playlistItem.location)
-				if playlistItem.author != "" {
-					fmt.Printf("Author: %s\n", playlistItem.author)
-				}
-
-				if playlistItem.description != "" {
-					fmt.Printf("Description: %s\n", playlistItem.description)
-				}
-
-				var timeoutduration time.Duration
-				//from json file
-				if playlistItem.playtime > 0 {
-					timeoutduration = time.Duration(playlistItem.playtime) * time.Second
-				}
-				//from command prompt
-				if j.playtime > 0 {
-					timeoutduration = time.Duration(j.playtime)
-				}
-				//internal default
-				if timeoutduration == 0 {
-					timeoutduration = rotatePeriod
-				}
-				fmt.Printf("Playtime: %s\n", timeoutduration)
-				rotateTicker.Reset(timeoutduration)
-
-				code := playlistItem.code
-
-				/*
-					-- Removes vbank 1, so nerfed for now!
-					if playlistItem.author != "" {
-						code = machines.CodeAddAuthorShim(code, playlistItem.author)
-					}
-				*/
-
-				ts := machines.MakeTicStateRunning(code)
-				(*j.comms) <- comms.Msg{Type: "tic-state", TicState: comms.DataTicState{
-					State: ts,
-				}}
+			<-rotateTicker.C
+			playlistItem, err := j.playlist.getNext()
+			if err != nil {
+				log.Println("ERR get code:", err)
+				break
 			}
+
+			fmt.Printf("Playing (TIC):\nLocation: %s\n", playlistItem.location)
+			if playlistItem.author != "" {
+				fmt.Printf("Author: %s\n", playlistItem.author)
+			}
+
+			if playlistItem.description != "" {
+				fmt.Printf("Description: %s\n", playlistItem.description)
+			}
+
+			playtime := time.Duration(j.playtime)
+			if playlistItem.playtime > 0 {
+				// Prefer the value from the playlist item in the JSON file if it is set...
+				playtime = time.Duration(playlistItem.playtime) * time.Second
+			}
+
+			rotateTicker.Reset(playtime)
+
+			code := playlistItem.code
+
+			/*
+				-- Removes vbank 1, so nerfed for now!
+				if playlistItem.author != "" {
+					code = machines.CodeAddAuthorShim(code, playlistItem.author)
+				}
+			*/
+
+			ts := machines.MakeTicStateRunning(code)
+			(*j.comms) <- comms.Msg{Type: "tic-state", TicState: comms.DataTicState{
+				State: ts,
+			}}
 		}
 	}()
 }

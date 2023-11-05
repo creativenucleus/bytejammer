@@ -1,11 +1,14 @@
 {
     "title": "Maths A.F. Playlist",
     "items": [{
-        "location": "https://livecode.demozoo.org/shader_file_sources/2023_09_04_byte_jam_monday_night_bytes/alia.lua"
+        "location": "https://livecode.demozoo.org/shader_file_sources/2023_09_04_byte_jam_monday_night_bytes/alia.lua",
+        "playtime": 3
     }, {
-        "location": "https://livecode.demozoo.org/shader_file_sources/2023_06_12_byte_jam_monday_night_bytes/gasman.lua"
+        "location": "https://livecode.demozoo.org/shader_file_sources/2023_06_12_byte_jam_monday_night_bytes/gasman.lua",
+        "playtime": 30
     }, {
-        "location": "https://livecode.demozoo.org/shader_file_sources/2022_12_05_byte_jam_fieldfx_casual/gasman.lua"
+        "location": "https://livecode.demozoo.org/shader_file_sources/2022_12_05_byte_jam_fieldfx_casual/gasman.lua",
+        "playtime": 3
     }, {
         "location": "https://livecode.demozoo.org/shader_file_sources/2023_07_28_byte_jam_evoke/superogue_jam.lua"
     }]

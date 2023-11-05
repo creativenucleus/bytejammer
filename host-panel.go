@@ -96,8 +96,6 @@ func (hp *HostPanel) wsWebOperator() func(http.ResponseWriter, *http.Request) {
 			// #TODO: handle exit
 			for {
 			}
-
-			return nil
 		})
 		if err != nil {
 			log.Print("upgrade:", err)
@@ -176,22 +174,22 @@ func (hp *HostPanel) webApiServer(w http.ResponseWriter, r *http.Request) {
 
 		// #TODO: This is not great - return some detail
 		if hp.session != nil {
-			apiOutErr(w, errors.New("Server already running"), http.StatusBadRequest)
+			apiOutErr(w, errors.New("server already running"), http.StatusBadRequest)
 			return
 		}
 
 		hp.session, err = server.CreateSession(port, req.SessionName, hp.chLog)
 		if err != nil {
-			hp.chLog <- fmt.Sprintf("Server failed to launch: %s", err)
+			hp.chLog <- fmt.Sprintf("server failed to launch: %s", err)
 			apiOutErr(w, err, http.StatusInternalServerError)
 			return
 		}
 
-		hp.sendLog(fmt.Sprintf("Server launched"))
+		hp.sendLog("server launched")
 		hp.sendServerStatus(true)
 
 	default:
-		apiOutErr(w, errors.New("Method not allowed"), http.StatusMethodNotAllowed)
+		apiOutErr(w, errors.New("method not allowed"), http.StatusMethodNotAllowed)
 	}
 }
 
@@ -244,9 +242,7 @@ func (hp *HostPanel) webApiMachine(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			playtime := 7 * time.Second //TODO: playtime
-
-			err = startLocalJukebox(playlist, playtime)
+			err = startLocalJukebox(playlist, time.Duration(JUKEBOX_PLAYTIME_SECS)*time.Second)
 			if err != nil {
 				apiOutErr(w, err, http.StatusInternalServerError)
 				return
@@ -255,14 +251,14 @@ func (hp *HostPanel) webApiMachine(w http.ResponseWriter, r *http.Request) {
 			hp.sendLog("TIC-80 Launched for (playlist)")
 
 		default:
-			apiOutErr(w, errors.New("Unexpected mode (should be jammer or jukebox)"), http.StatusBadRequest)
+			apiOutErr(w, errors.New("unexpected mode (should be jammer or jukebox)"), http.StatusBadRequest)
 		}
 
 		hp.sendServerStatus(true)
 		apiOutResponse(w, nil, http.StatusCreated)
 
 	default:
-		apiOutErr(w, errors.New("Method not allowed"), http.StatusMethodNotAllowed)
+		apiOutErr(w, errors.New("method not allowed"), http.StatusMethodNotAllowed)
 	}
 }
 func (hp *HostPanel) handleStopServer() {
