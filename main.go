@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/urfave/cli/v2"
 
@@ -57,15 +58,22 @@ func main() {
 						Name:  "playlist",
 						Usage: "Playlist file (empty for LCDZ playlist)",
 					},
+					&cli.StringFlag{
+						Name:  "playtime",
+						Usage: "Playtime for each item, default 7 sec",
+					},
 				},
 				Action: func(cCtx *cli.Context) error {
+					var_playtime := cCtx.Uint("playtime")
+					fmt.Printf("default playtime is %d\n", var_playtime)
+					var playtime = time.Duration(var_playtime) * time.Second
+
 					playlistFilename := cCtx.String("playlist")
 					playlist, err := readPlaylist(playlistFilename)
 					if err != nil {
 						log.Fatal(err)
 					}
-
-					err = startLocalJukebox(playlist)
+					err = startLocalJukebox(playlist, playtime)
 					if err != nil {
 						log.Fatal(err)
 					}
@@ -106,7 +114,6 @@ func main() {
 					if err != nil {
 						log.Fatal(err)
 					}
-
 					return nil
 				},
 			}, {
@@ -146,8 +153,16 @@ func main() {
 						Name:  "playlist",
 						Usage: "Playlist file (empty for LCDZ playlist)",
 					},
+					&cli.StringFlag{
+						Name:  "playtime",
+						Usage: "Playtime for each item, default 7 sec",
+					},
 				},
 				Action: func(cCtx *cli.Context) error {
+					var_playtime := cCtx.Uint("playtime")
+					fmt.Printf("default playtime is %d\n", var_playtime)
+					var playtime = time.Duration(var_playtime) * time.Second
+
 					host := cCtx.String("host")
 					port := cCtx.Int("port")
 					playlistFilename := cCtx.String("playlist")
@@ -156,7 +171,7 @@ func main() {
 						log.Fatal(err)
 					}
 
-					err = startClientJukebox(host, port, playlist)
+					err = startClientJukebox(host, port, playtime, playlist)
 					if err != nil {
 						log.Fatal(err)
 					}

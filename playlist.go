@@ -17,6 +17,7 @@ type PlaylistItem struct {
 	location    string
 	author      string
 	description string
+	playtime    uint32
 	code        []byte
 }
 

@@ -42,6 +42,25 @@ Make sure you place it in a folder of its own. It will create a subfolder to hol
 Default (no arguments) mode will launch into jukebox mode, playing random Bytejams from LCDZ.  
 It can be provided with a JSON file playlist (from remote and local) or .zip file.  
 
+JSON file should be formated like 
+```JSON
+{
+    "title": "TIC-80 selectec works",
+    "description": "(with FFT)",
+    "items": [
+        {
+            "location": "https://livecode.demozoo.org/shader_file_sources/2023_05_15_byte_jam_monday_night_bytes/nusan.lua",
+            "author": "Nusan ", 
+            "description": "FieldFX Byte Jam - 15/05/2023",
+            "playtime": 30
+        }
+    ]
+}
+```
+
+A JSON file can be included in a zip file with the name 'index.json' 
+
+
 Applications:  
 
 - To project onto a wall at parties to preach the good TIC and Bytejam words.  

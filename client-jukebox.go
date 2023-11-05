@@ -2,13 +2,13 @@ package main
 
 import (
 	"log"
-
+	"time"
 	"github.com/creativenucleus/bytejammer/comms"
 )
 
-func startClientJukebox(host string, port int, playlist *Playlist) error {
+func startClientJukebox(host string, port int, playtime time.Duration, playlist *Playlist) error {
 	ch := make(chan comms.Msg)
-	j, err := NewJukebox(playlist, &ch)
+	j, err := NewJukebox(playlist, playtime, &ch)
 	if err != nil {
 		return err
 	}
