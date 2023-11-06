@@ -60,7 +60,7 @@ func NewPlaylistFromZip(zipFilename string) (*Playlist, error) {
 		for key, item := range playlist.items {
 			codeData, ok := files[item.location]
 			if !ok {
-				return nil, fmt.Errorf("File not found (%s)", item.location)
+				return nil, fmt.Errorf("file not found (%s)", item.location)
 			}
 
 			playlist.items[key].code = codeData

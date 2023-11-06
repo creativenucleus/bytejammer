@@ -39,6 +39,9 @@ func startClientJukebox(host string, port int, playtime time.Duration, playlist 
 	}()
 
 	j.start()
+
 	for {
+		// Removes 100% CPU warning - but this should really be restructured
+		time.Sleep(10 * time.Second)
 	}
 }

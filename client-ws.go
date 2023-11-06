@@ -62,6 +62,8 @@ func startClientServerConn(host string, port int, identity *Identity, chServerSt
 
 	// Lock #TODO: use a channel to escape
 	for {
+		// Removes 100% CPU warning - but this should really be restructured
+		time.Sleep(10 * time.Second)
 	}
 }
 

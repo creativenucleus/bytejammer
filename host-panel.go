@@ -95,6 +95,8 @@ func (hp *HostPanel) wsWebOperator() func(http.ResponseWriter, *http.Request) {
 
 			// #TODO: handle exit
 			for {
+				// Removes 100% CPU warning - but this should really be restructured
+				time.Sleep(10 * time.Second)
 			}
 		})
 		if err != nil {

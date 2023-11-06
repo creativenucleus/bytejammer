@@ -54,9 +54,9 @@ func wsNusan(nl NusanLauncher) func(http.ResponseWriter, *http.Request) {
 
 			// #TODO: handle exit
 			for {
+				// Removes 100% CPU warning - but this should really be restructured
+				time.Sleep(10 * time.Second)
 			}
-
-			return nil
 		})
 		if err != nil {
 			log.Print("ERR upgrade:", err)
@@ -68,6 +68,8 @@ func wsNusan(nl NusanLauncher) func(http.ResponseWriter, *http.Request) {
 // #TODO: Is this used?
 func (nl *NusanLauncher) nusanWsOperatorRead() {
 	for {
+		// Removes 100% CPU warning - but this should really be restructured
+		time.Sleep(10 * time.Second)
 		/*
 			var msg interface{}
 			err := nl.conn.ReadJSON(&msg)

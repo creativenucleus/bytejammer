@@ -28,16 +28,14 @@ func startLocalJukebox(playlist *Playlist, playtime time.Duration) error {
 
 	go func() {
 		for {
-			select {
-			case msg, ok := <-ch:
-				if ok {
-					switch msg.Type {
-					case "tic-state":
-						err = m.Tic.WriteImportCode(msg.TicState.State)
-						if err != nil {
-							// #TODO: soften!
-							log.Fatal(err)
-						}
+			msg, ok := <-ch
+			if ok {
+				switch msg.Type {
+				case "tic-state":
+					err = m.Tic.WriteImportCode(msg.TicState.State)
+					if err != nil {
+						// #TODO: soften!
+						log.Fatal(err)
 					}
 				}
 			}
@@ -46,5 +44,7 @@ func startLocalJukebox(playlist *Playlist, playtime time.Duration) error {
 
 	j.start()
 	for {
+		// Removes 100% CPU warning - but this should really be restructured
+		time.Sleep(10 * time.Second)
 	}
 }
