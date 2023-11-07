@@ -31,6 +31,7 @@ type ClientPanel struct {
 	chSendClientStatus chan comms.DataClientStatus
 	wsClient           *websocket.Conn
 	wsMutex            sync.Mutex
+	chLog              chan string
 }
 
 func startClientPanel(port int) error {
@@ -52,12 +53,22 @@ func startClientPanel(port int) error {
 
 	cp := ClientPanel{
 		chSendClientStatus: make(chan comms.DataClientStatus),
+		chLog:              make(chan string),
 	}
+
+	go func() {
+		for {
+			logMsg := <-cp.chLog
+			cp.sendLog(logMsg)
+		}
+	}()
+
 	http.HandleFunc(fmt.Sprintf("/%s", session), cp.webClientIndex)
 	http.HandleFunc(fmt.Sprintf("/%s/api/identity.json", session), cp.webClientApiIdentityJSON)
 	http.HandleFunc(fmt.Sprintf("/%s/api/join-server.json", session), cp.webClientApiJoinServerJSON)
 	http.HandleFunc(fmt.Sprintf("/%s/ws-client", session), cp.wsWebClient())
-	if err := webServer.ListenAndServe(); err != nil {
+	err = webServer.ListenAndServe()
+	if err != nil {
 		return err
 	}
 
@@ -113,6 +124,8 @@ func (cp *ClientPanel) webClientApiIdentityJSON(w http.ResponseWriter, r *http.R
 func (cp *ClientPanel) webClientApiJoinServerJSON(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "POST":
+		cp.chLog <- "Request: Join Server"
+
 		cp.chSendClientStatus <- comms.DataClientStatus{IsConnected: false}
 
 		// #TODO: Cleaner way to do this?
@@ -209,6 +222,15 @@ func (cp *ClientPanel) wsWrite() {
 			// #TODO: relax
 			log.Fatal(err)
 		}
+	}
+}
+
+func (cp *ClientPanel) sendLog(message string) {
+	msg := comms.Msg{Type: "log", Log: comms.DataLog{Msg: message}}
+
+	err := cp.sendData(&msg)
+	if err != nil {
+		log.Println("read:", err)
 	}
 }
 

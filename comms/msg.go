@@ -45,6 +45,7 @@ type DataChallengeResponse struct {
 }
 
 type DataSessionStatus struct {
+	Port    int
 	Clients []struct {
 		Uuid         string
 		DisplayName  string

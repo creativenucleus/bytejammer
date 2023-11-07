@@ -146,6 +146,7 @@ func (hp *HostPanel) wsOperatorWrite() {
 		case <-hp.statusTicker.C:
 			hp.sendServerStatus(false)
 
+		// Is this in the right place?...
 		case logMsg := <-hp.chLog:
 			hp.sendLog(logMsg)
 		}

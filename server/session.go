@@ -66,7 +66,7 @@ func CreateSession(port int, name string, chLog chan string) (*Session, error) {
 	}
 
 	// Periodic saving...
-	// #TODO: (There must be a bad pattern!)
+	// #TODO: (There must be a better pattern!)
 	go func() {
 		for {
 			time.Sleep(10 * time.Second)
@@ -174,7 +174,9 @@ func (js *Session) getBasePath() string {
 }
 
 func (js *Session) GetStatus() comms.DataSessionStatus {
-	ss := comms.DataSessionStatus{}
+	ss := comms.DataSessionStatus{
+		Port: js.port,
+	}
 
 	for _, jc := range js.switchboard.conns {
 		status := "waiting"
