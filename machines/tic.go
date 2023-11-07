@@ -1,6 +1,7 @@
 package machines
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -17,10 +18,17 @@ import (
 type Tic struct {
 	cmd         *exec.Cmd
 	ticFilename string
-	// Add latestImport - for server to read
+
+	latestImport   TicState // #TODO: propagate this to the server panel
 	importFullpath string
+
 	// Add latestExport - for server to read
 	exportFullpath string
+
+	// This receives nil for normal shutdown (i.e. by TIC exit, user clicking the close button etc)
+	chClosedErr chan error
+
+	codeOverride bool
 }
 
 func (t *Tic) GetExportFullpath() string {
@@ -37,13 +45,13 @@ func (t *Tic) GetProcessID() int {
 	}
 */
 
-func newTic(slug string, hasImportFile bool, hasExportFile bool, isServer bool /*, broadcaster *NusanLauncher*/) (*Tic, error) {
-	tic := Tic{}
+func newTic(slug string, hasImportFile bool, hasExportFile bool, isServer bool, chClosedError chan error /*, broadcaster *NusanLauncher*/) (*Tic, error) {
+	tic := Tic{
+		chClosedErr: chClosedError,
+	}
 	args := []string{
 		"--skip",
 	}
-
-	fmt.Println(slug)
 
 	exchangefileBasePath := fmt.Sprintf("%s_temp", config.WORK_DIR)
 	err := util.EnsurePathExists(exchangefileBasePath, os.ModePerm)
@@ -107,9 +115,11 @@ func newTic(slug string, hasImportFile bool, hasExportFile bool, isServer bool /
 
 	// use goroutine waiting, manage process
 	// this is important, otherwise the process becomes in S mode
+	// This may be error or nil
 	go func() {
 		err = tic.cmd.Wait()
 		fmt.Printf("TIC (%d) finished with error: %v", tic.cmd.Process.Pid, err)
+		tic.chClosedErr <- err
 		// #TODO: cleanup
 	}()
 	/*
@@ -150,9 +160,51 @@ func (t *Tic) shutdown() {
 	}
 }
 
-func (t Tic) WriteImportCode(ts TicState) error {
+// This pushes the supplied code to this TIC and prevents regular import for the specified duration
+// 1) Grabs the current TIC state to holding
+// 2) Writes the override to the import file
+func (t *Tic) SetCodeOverride(tsOverride TicState, d time.Duration) error {
+	// We ought to handle when someone sets multiple concurrent overrides - for the moment, just block!
+	if t.codeOverride {
+		return errors.New("we already have a code override - request ignored")
+	}
+
+	err := t.WriteImportCode(tsOverride, false)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	t.codeOverride = true
+
+	// Remove the override struct when the timer expires
+	timer := time.NewTimer(d)
+	go func() error { // (NB error ignored)
+		<-timer.C
+		err := t.WriteImportCode(t.latestImport, true)
+		if err != nil {
+			return err
+		}
+
+		t.codeOverride = false
+		return nil
+	}()
+
+	return nil
+}
+
+// If we have overide code, then put the supplied update in a placeholder, ready for when the override completes
+func (t *Tic) WriteImportCode(ts TicState, saveAsLatest bool) error {
 	if t.importFullpath == "" {
 		log.Fatal("Tried to import code - but file is not set up")
+	}
+
+	if saveAsLatest {
+		t.latestImport = ts
+	}
+
+	if t.codeOverride {
+		return nil
 	}
 
 	data, err := ts.MakeDataToImport()

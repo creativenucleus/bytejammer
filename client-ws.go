@@ -95,7 +95,7 @@ func (cws *ClientWS) clientWsReader(tic *machines.Tic, identity *Identity) error
 			cws.handleChallengeRequest(msg.ChallengeRequest.Challenge, identity)
 
 		case "tic-state":
-			tic.WriteImportCode(msg.TicState.State)
+			tic.WriteImportCode(msg.TicState.State, true)
 		}
 	}
 }
@@ -106,7 +106,6 @@ func (cws *ClientWS) handleChallengeRequest(challenge string, identity *Identity
 		return err
 	}
 
-	fmt.Printf("%x", data)
 	signed, err := identity.Crypto.Sign(data)
 	if err != nil {
 		return err

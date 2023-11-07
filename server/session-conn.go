@@ -9,7 +9,6 @@ import (
 
 	"github.com/creativenucleus/bytejammer/comms"
 	"github.com/creativenucleus/bytejammer/crypto"
-	"github.com/creativenucleus/bytejammer/embed"
 	"github.com/creativenucleus/bytejammer/machines"
 	"github.com/creativenucleus/bytejammer/util"
 	"github.com/google/uuid"
@@ -157,7 +156,7 @@ func (jc *SessionConn) runServerWsConnRead(js *Session) {
 					}
 				*/
 
-				err = machine.Tic.WriteImportCode(ts)
+				err = machine.Tic.WriteImportCode(ts, true)
 				if err != nil {
 					js.chLog <- fmt.Sprintln("read:", err)
 					break
@@ -178,7 +177,8 @@ func (jc *SessionConn) runServerWsConnWrite(js *Session) {
 	}
 }
 
-// TODO: Handle error
+// #TODO: Adapt this to send code to remote machines
+/*
 func (js *SessionConn) sendMachineNameCode(machineName string) error {
 	ts := machines.MakeTicStateRunning(embed.LuaClient)
 	code := machines.CodeReplace(ts.GetCode(), map[string]string{
@@ -193,6 +193,7 @@ func (js *SessionConn) sendMachineNameCode(machineName string) error {
 	err := js.sendData(msg)
 	return err
 }
+*/
 
 func (jc *SessionConn) sendData(data interface{}) error {
 	jc.wsMutex.Lock()

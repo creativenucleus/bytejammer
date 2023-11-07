@@ -10,6 +10,7 @@ import (
 
 	"github.com/creativenucleus/bytejammer/comms"
 	"github.com/creativenucleus/bytejammer/config"
+	"github.com/creativenucleus/bytejammer/embed"
 	"github.com/creativenucleus/bytejammer/machines"
 	"github.com/creativenucleus/bytejammer/util"
 	"github.com/google/uuid"
@@ -270,24 +271,62 @@ func (js *Session) IdentifyMachines() {
 	for _, c := range js.switchboard.conns {
 		m := js.switchboard.getMachineForConn(c)
 		if m != nil {
-			err := c.sendMachineNameCode(m.MachineName)
-			if err != nil {
-				js.chLog <- fmt.Sprintln("ERR write:", err)
-			}
+			fmt.Printf("Machine platform: %s\n", m.Platform)
+			if m.Platform == machines.PlatformTIC80 {
+				jammerDisplayName := "-"
+				conn := js.switchboard.getConnForMachine(m)
+				if conn != nil {
+					jammerDisplayName = conn.identity.displayName
+				}
 
+				ts := machines.MakeTicStateRunning(embed.LuaClient)
+				code := machines.CodeReplace(ts.GetCode(), map[string]string{
+					"CLIENT_ID":    m.MachineName,
+					"DISPLAY_NAME": jammerDisplayName,
+				})
+				ts.SetCode(code)
+
+				err := m.Tic.SetCodeOverride(ts, 10*time.Second)
+				if err != nil {
+					js.chLog <- fmt.Sprintln("ERR write:", err)
+				}
+			}
 			count++
 		}
 	}
-	js.chLog <- fmt.Sprintf("Identification sent to %d machines for 30 seconds", count)
+	js.chLog <- fmt.Sprintf("Identification sent to %d machines for 10 seconds", count)
 }
 
 func (js *Session) CloseMachine(data comms.DataCloseMachine) {
-	// #TODO: unlink and unregister!
+	// #TODO: This is quite verbose. Maybe the switchboard interface should be simpler?
+	fmt.Printf("Closeing Machine: %s\n", data.Uuid)
 
-	fmt.Printf("CLOSE: %s\n", data.Uuid)
-	err := machines.ShutdownMachine(data.Uuid)
+	machineUuid, err := uuid.Parse(data.Uuid)
 	if err != nil {
-		js.chLog <- fmt.Sprintf("ERR shutdown: %s", err)
+		js.chLog <- fmt.Sprintf("ERR close machine: %s", err)
+		return
+	}
+
+	machine := js.switchboard.getMachine(machineUuid)
+	if machine == nil {
+		js.chLog <- "ERR close machine: could not get machine"
+		return
+	}
+
+	conn := js.switchboard.getConnForMachine(machine)
+	if conn != nil {
+		err = js.switchboard.unlinkMachineFromConn(machineUuid, conn.connUuid)
+		if err != nil {
+			js.chLog <- fmt.Sprintf("ERR close machine: %s", err)
+			return
+		}
+	}
+
+	js.switchboard.unregisterMachine(machine)
+
+	err = machines.ShutdownMachine(machineUuid.String())
+	if err != nil {
+		js.chLog <- fmt.Sprintf("ERR close machine: %s", err)
 		return
 	}
 

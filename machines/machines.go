@@ -8,6 +8,10 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	PlatformTIC80 = "TIC-80"
+)
+
 type Machine struct {
 	MachineName string
 	Platform    string
@@ -37,9 +41,10 @@ func LaunchMachine(platform string, hasImport bool, hasExport bool, isServer boo
 
 	var err error
 	switch m.Platform {
-	case "TIC-80":
+	case PlatformTIC80:
 		slug := fmt.Sprint(rand.Intn(100000000))
-		m.Tic, err = newTic(slug, hasImport, hasExport, isServer)
+		chClosedErr := make(chan error)
+		m.Tic, err = newTic(slug, hasImport, hasExport, isServer, chClosedErr)
 		if err != nil {
 			return nil, err
 		}
@@ -49,6 +54,7 @@ func LaunchMachine(platform string, hasImport bool, hasExport bool, isServer boo
 	}
 
 	MACHINES = append(MACHINES, &m)
+	fmt.Printf("%v\n", m)
 
 	return &m, nil
 }
