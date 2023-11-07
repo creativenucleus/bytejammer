@@ -17,6 +17,7 @@ type Machine struct {
 	Platform    string
 	Tic         *Tic
 	Uuid        uuid.UUID
+	ChClosedErr chan error // May be nil
 }
 
 var MACHINES []*Machine
@@ -37,14 +38,14 @@ func LaunchMachine(platform string, hasImport bool, hasExport bool, isServer boo
 		Platform:    platform,
 		Uuid:        uuid.New(),
 		MachineName: GetFunName(len(MACHINES)),
+		ChClosedErr: make(chan error),
 	}
 
 	var err error
 	switch m.Platform {
 	case PlatformTIC80:
 		slug := fmt.Sprint(rand.Intn(100000000))
-		chClosedErr := make(chan error)
-		m.Tic, err = newTic(slug, hasImport, hasExport, isServer, chClosedErr)
+		m.Tic, err = newTic(slug, hasImport, hasExport, isServer, m.ChClosedErr)
 		if err != nil {
 			return nil, err
 		}

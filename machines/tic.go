@@ -45,10 +45,8 @@ func (t *Tic) GetProcessID() int {
 	}
 */
 
-func newTic(slug string, hasImportFile bool, hasExportFile bool, isServer bool, chClosedError chan error /*, broadcaster *NusanLauncher*/) (*Tic, error) {
-	tic := Tic{
-		chClosedErr: chClosedError,
-	}
+func newTic(slug string, hasImportFile bool, hasExportFile bool, isServer bool, chClosedErr chan error /*, broadcaster *NusanLauncher*/) (*Tic, error) {
+	tic := Tic{}
 	args := []string{
 		"--skip",
 	}
@@ -119,7 +117,7 @@ func newTic(slug string, hasImportFile bool, hasExportFile bool, isServer bool, 
 	go func() {
 		err = tic.cmd.Wait()
 		fmt.Printf("TIC (%d) finished with error: %v", tic.cmd.Process.Pid, err)
-		tic.chClosedErr <- err
+		chClosedErr <- err
 		// #TODO: cleanup
 	}()
 	/*

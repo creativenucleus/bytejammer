@@ -27,12 +27,22 @@ func makeSwitchboard() *Switchboard {
 
 // #TODO: Mutexes
 
-func (s *Switchboard) registerMachine(machine *machines.Machine) {
-	s.machines[machine.Uuid] = machine
+func (s *Switchboard) registerMachine(m *machines.Machine) {
+	s.machines[m.Uuid] = m
+
+	go func() {
+		<-m.ChClosedErr
+		s.unregisterMachine(m)
+	}()
 }
 
-func (s *Switchboard) unregisterMachine(machine *machines.Machine) {
-	delete(s.machines, machine.Uuid)
+func (s *Switchboard) unregisterMachine(m *machines.Machine) {
+	conn := s.getConnForMachine(m)
+	if conn != nil {
+		s.unlinkMachineFromConn(m.Uuid, conn.connUuid) // #TODO: error ignored (log instead?)
+	}
+
+	delete(s.machines, m.Uuid)
 }
 
 func (s *Switchboard) getMachine(uuid uuid.UUID) *machines.Machine {
