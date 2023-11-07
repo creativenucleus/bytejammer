@@ -42,6 +42,25 @@ Make sure you place it in a folder of its own. It will create a subfolder to hol
 Default (no arguments) mode will launch into jukebox mode, playing random Bytejams from LCDZ.  
 It can be provided with a JSON file playlist (from remote and local) or .zip file.  
 
+The JSON file format looks like:
+```JSON
+{
+    "title": "TIC-80 selected works",
+    "description": "(with FFT)",    // (optional)
+    "items": [
+        {
+            "location": "https://livecode.demozoo.org/shader_file_sources/2023_05_15_byte_jam_monday_night_bytes/nusan.lua",
+            "author": "Nusan",      // (optional)
+            "description": "FieldFX Byte Jam - 15/05/2023", // (optional)
+            "playtime": 30  // (optional)
+        }
+    ]
+}
+```
+
+A JSON file can be included in a zip file with the name 'index.json' 
+
+
 Applications:  
 
 - To project onto a wall at parties to preach the good TIC and Bytejam words.  
@@ -141,6 +160,10 @@ ByteJammer builds on the [Bytejam launcher](https://github.com/glastonbridge/byt
 For the previous work ByteJammer builds on, testing, good-will, and support:
 
 Aldroid, Gasman, Lex Bailey, Mantratronic, NesBox, NuSan, PS, Raccoon Violet, Superogue, Totetmatt.
+
+Additional development:
+
+zeno4ever.
 
 Thanks to those whose work features on the [walkthrough video](https://youtube.com/watch?v=erhyvrGxwZY):
 

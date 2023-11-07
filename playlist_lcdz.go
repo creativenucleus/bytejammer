@@ -22,6 +22,9 @@ func NewPlaylistLCDZ() (*Playlist, error) {
 	}
 
 	doc, err := html.Parse(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	p := NewPlaylist()
 	links := findAllLuaLinks(doc)

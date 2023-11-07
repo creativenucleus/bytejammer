@@ -37,7 +37,7 @@ func MakeTicStateFromExportData(data []byte) (*TicState, error) {
 	r := regexp.MustCompile(`(?s)^-- pos: (\d+),(\d+)\n(.*)$`)
 	matches := r.FindStringSubmatch(string(data))
 
-	ts.IsRunning = matches[1] == "0" && matches[1] == "0"
+	ts.IsRunning = matches[1] == "0" && matches[2] == "0"
 	if !ts.IsRunning {
 		var err error
 		ts.CursorX, err = strconv.Atoi(matches[1])

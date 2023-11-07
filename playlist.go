@@ -17,6 +17,7 @@ type PlaylistItem struct {
 	location    string
 	author      string
 	description string
+	playtime    uint32
 	code        []byte
 }
 
@@ -64,7 +65,7 @@ func (p *Playlist) getNext() (*PlaylistItem, error) {
 	defer respLua.Body.Close()
 
 	if respLua.StatusCode != http.StatusOK {
-		return nil, errors.New(fmt.Sprintf("ERR write: Status Code = %d", respLua.StatusCode))
+		return nil, fmt.Errorf("write: Status Code = %d", respLua.StatusCode)
 	}
 
 	data, err := io.ReadAll(respLua.Body)

@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"math/rand"
 
-	"github.com/creativenucleus/bytejammer/server"
 	"github.com/google/uuid"
+)
+
+const (
+	PlatformTIC80 = "TIC-80"
 )
 
 type Machine struct {
@@ -14,6 +17,7 @@ type Machine struct {
 	Platform    string
 	Tic         *Tic
 	Uuid        uuid.UUID
+	ChClosedErr chan error // May be nil
 }
 
 var MACHINES []*Machine
@@ -33,14 +37,15 @@ func LaunchMachine(platform string, hasImport bool, hasExport bool, isServer boo
 	m := Machine{
 		Platform:    platform,
 		Uuid:        uuid.New(),
-		MachineName: server.GetFunName(len(MACHINES)),
+		MachineName: GetFunName(len(MACHINES)),
+		ChClosedErr: make(chan error),
 	}
 
 	var err error
 	switch m.Platform {
-	case "TIC-80":
+	case PlatformTIC80:
 		slug := fmt.Sprint(rand.Intn(100000000))
-		m.Tic, err = newTic(slug, hasImport, hasExport, isServer)
+		m.Tic, err = newTic(slug, hasImport, hasExport, isServer, m.ChClosedErr)
 		if err != nil {
 			return nil, err
 		}
@@ -50,6 +55,7 @@ func LaunchMachine(platform string, hasImport bool, hasExport bool, isServer boo
 	}
 
 	MACHINES = append(MACHINES, &m)
+	fmt.Printf("%v\n", m)
 
 	return &m, nil
 }
