@@ -54,6 +54,20 @@ type DataSessionStatus struct {
 		MachineUuid  string
 		LastPingTime string
 	}
+	Slots []struct {
+		Id int
+		// #TODO: Fill... (take over from the Machine slice)
+		Status            string
+		MachineName       string
+		ProcessID         int
+		Platform          string
+		JammerDisplayName string
+		LastSnapshotTime  string
+		/*
+			Uuid              string
+			ClientUuid        string
+		*/
+	}
 	Machines []struct {
 		Uuid              string
 		MachineName       string

@@ -20,7 +20,7 @@
             let IDENTITIES = null;
 
             const refreshViewIdentities = () => {
-                const elSelect = document.getElementById("identity-id");
+                const elSelect = document.getElementById("identity-id-select");
                 while (elSelect.firstChild) {
                     elSelect.removeChild(elSelect.firstChild);
                 }
@@ -28,7 +28,7 @@
                 for (const [key, identity] of Object.entries(IDENTITIES)) {
                     const elOption = document.createElement("option");
                     elOption.value = key;
-                    elOption.text = identity.displayName;
+                    elOption.text = identity['display-name'];
 
                     elSelect.appendChild(elOption);
                 }
@@ -143,95 +143,75 @@
     </head>
     <body>
         <div class="container">
-            <h1><img src="/static/media/bytejammer-icon.png" alt="ByteJammer icon"> ByteJammer</h1>
+            <h1><img src="/static/media/bytejammer-icon.png" alt="ByteJammer icon"> ByteJammer / {{release_title}} edition</h1>
 
-            <div class="card mt-4 mb-4" id="section-create-identity">
-                <div class="card-header">
-                    <h2>Create an Identity</h2>
-                </div>
-                <div class="card-body">
-                    <form id="create-identity">
-                        <div class="row g-3 align-items-center">
-                            <div class="col-auto">
-                                <label for="displayName" class="col-form-label">Display Name</label>
+            <div id="section-create-identity" class="mt-4 mb-4">
+                <div class="card">
+                    <div class="card-header text-bg-primary">
+                        <h2>Create an Identity</h2>
+                    </div>
+                    <div class="card-body">
+                        <form id="create-identity">
+                            <div class="row mb-3">
+                                <label for="display-name" class="col-sm-3 col-form-label text-end">Display Name</label>
+                                <div class="col-sm-9">
+                                    <input value="" class="form-control" id="display-name" name="display-name">
+                                    <span id="display-name-help" class="form-text">
+                                        This name will be shown for you during the jams
+                                    </span>
+                                </div>
                             </div>
-                            <div class="col-auto">
-                                <input type="text" id="displayName" name="displayName" class="form-control" aria-describedby="displayNameHelp">
+                            <div class="row mb-3">
+                                <div class="offset-sm-3">
+                                    <button type="submit" class="btn btn-primary">Create</button>
+                                </div>
                             </div>
-                            <div class="col-auto">
-                                <span id="displayNameHelp" class="form-text">
-                                    This will be shown on the jam
-                                </span>
-                            </div>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Create</button>
-                    </form>
+                        </form>
+                    </div>
                 </div>
             </div>
 
-            <div class="card mt-4 mb-4"  id="section-join-server">
-                <div class="card-header">
-                    <h2>Join a Server</h2>
-                </div>
-                <div class="card-body">
-                    <form id="join-server">
-                        <div class="row g-3 align-items-center">
-                            <div class="col-auto">
-                                <label for="host" class="form-label">Host</label>
+            <div id="section-join-server" class="mt-4 mb-4">
+                <div class="card">
+                    <div class="card-header text-bg-primary">
+                        <h3>Join a Server</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="join-server">
+                            <div class="row mb-3">
+                                <label for="host" class="col-sm-3 col-form-label text-end">Host</label>
+                                <div class="col-sm-9">
+                                    <input value="localhost" class="form-control" id="host" name="host">
+                                </div>
                             </div>
-                            <div class="col-auto">
-                                <input type="text" value="localhost" class="form-control" id="host" name="host" aria-describedby="host">
+                            <div class="row mb-3">
+                                <label for="port" class="col-sm-3 col-form-label text-end">Port</label>
+                                <div class="col-sm-9">
+                                    <input type="number" value="4545" class="form-control" id="port" name="port">
+                                </div>
                             </div>
-                            <div class="col-auto">
-                                <span id="displayNameHelp" class="form-text">
-                                    
-                                </span>
+                            <div class="row mb-3">
+                                <label for="identity-id-select" class="col-sm-3 col-form-label text-end">Identity</label>
+                                <div class="col-sm-9">
+                                    <select class="form-select" aria-label="identity-id" id="identity-id-select" name="identity-id">
+                                    </select>
+                                    <span id="identity-id-help" class="form-text">
+                                        The server will receive this jammer name
+                                    </span>
+                                </div>
                             </div>
-                        </div>
-                        <div class="row g-3 align-items-center">
-                            <div class="col-auto">
-                                <label for="port" class="form-label">Port</label>
+                            <div class="row mb-3">
+                                <div class="offset-sm-3">
+                                    <button type="submit" class="btn btn-primary">Join</button>
+                                </div>
                             </div>
-                            <div class="col-auto">
-                                <input type="number" value="4455" class="form-control" id="port" name="port" aria-describedby="port">
-                            </div>
-                            <div class="col-auto">
-                                <span id="displayNameHelp" class="form-text">
-                                    
-                                </span>
-                            </div>
-                        </div>
-                        <div class="row g-3 align-items-center">
-                            <div class="col-auto">
-                                <label for="identity-id" class="col-form-label">Identity</label>
-                            </div>
-                            <div class="col-auto">
-                                <select class="form-select" aria-label="Default select example" id="identity-id" name="identity-id">
-                                </select>
-                            </div>
-                        </div>
-                        <!--
-                        <div class="row g-3 align-items-center">
-                            <div class="col-auto">
-                                <label for="message" class="form-label">Message</label>
-                            </div>
-                            <div class="col-auto">
-                                <textarea class="form-control" id="port" name="message" aria-describedby="message"></textarea>
-                            </div>
-                            <div class="col-auto">
-                                <span id="displayNameHelp" class="form-text">
-                                    
-                                </span>
-                            </div>
-                        </div>
-                        -->
-                        <button type="submit" class="btn btn-primary">Join</button>
-                    </form>
-                </div>
+                        </form>
+                    </div>
+                </div>    
             </div>
 
             <div class="card mt-4 mb-4">
-                <div class="card-header">
+                <div class="card-header text-bg-secondary">
                     <h2>Log</h2>
                 </div>
                 <div class="card-body">

@@ -20,7 +20,7 @@ type ClientWS struct {
 	basepath string
 }
 
-func startClientServerConn(host string, port int, identity *Identity, chServerStatus chan comms.DataClientStatus) error {
+func startClientServerConn(host string, port int, identity *Identity, chServerStatus chan comms.DataClientStatus, chLog chan string) error {
 	chServerStatus <- comms.DataClientStatus{IsConnected: false}
 	cws := ClientWS{
 		chMsg: make(chan comms.Msg),
@@ -33,20 +33,22 @@ func startClientServerConn(host string, port int, identity *Identity, chServerSt
 		return err
 	}
 
-	// Keep running until we make a connection
+	// Make a connection or fail
+	retries := 5
+	retryInterval := 5 * time.Second
 	for {
-		// #TODO: This is not the right construction
-		var err error
 		cws.ws, err = clientOpenConnection(host, port)
-		if err != nil {
-			//chServerStatus <- false
-			log.Println(err)
-			time.Sleep(5 * time.Second)
-			continue
+		if err == nil {
+			break
 		}
-
-		break
+		retries -= 1
+		if retries == 0 {
+			return fmt.Errorf("failed to connect. Aborted")
+		}
+		chLog <- fmt.Sprintf("Failed to connect - retrying in %s (%d more times)...", retryInterval, retries)
+		time.Sleep(retryInterval)
 	}
+
 	defer cws.ws.Close()
 	chServerStatus <- comms.DataClientStatus{IsConnected: true}
 

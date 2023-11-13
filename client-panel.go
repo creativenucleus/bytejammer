@@ -78,7 +78,10 @@ func startClientPanel(port int) error {
 func (cp *ClientPanel) webClientIndex(w http.ResponseWriter, r *http.Request) {
 	env := stick.New(nil)
 
-	err := env.Execute(string(embed.ClientIndexHtml), w, map[string]stick.Value{"session_key": "session"})
+	err := env.Execute(string(embed.ClientIndexHtml), w, map[string]stick.Value{
+		"session_key":   "session",
+		"release_title": RELEASE_TITLE,
+	})
 	if err != nil {
 		log.Println("write:", err)
 	}
@@ -98,7 +101,7 @@ func (cp *ClientPanel) webClientApiIdentityJSON(w http.ResponseWriter, r *http.R
 	case "POST":
 		// #TODO: Cleaner way to do this?
 		type reqType struct {
-			DisplayName string `json:"displayName"`
+			DisplayName string `json:"display-name"`
 		}
 
 		var req reqType
@@ -121,19 +124,17 @@ func (cp *ClientPanel) webClientApiIdentityJSON(w http.ResponseWriter, r *http.R
 	}
 }
 
+// #TODO: Prevent multiple join attempts by one client
 func (cp *ClientPanel) webClientApiJoinServerJSON(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "POST":
 		cp.chLog <- "Request: Join Server"
-
 		cp.chSendClientStatus <- comms.DataClientStatus{IsConnected: false}
 
-		// #TODO: Cleaner way to do this?
 		type reqType struct {
 			Host       string `json:"host"`
 			Port       string `json:"port"`
 			IdentityId string `json:"identity-id"`
-			Message    string `json:"message"`
 		}
 
 		var req reqType
@@ -155,7 +156,7 @@ func (cp *ClientPanel) webClientApiJoinServerJSON(w http.ResponseWriter, r *http
 			return
 		}
 
-		err = startClientServerConn(req.Host, port, identity, cp.chSendClientStatus)
+		err = startClientServerConn(req.Host, port, identity, cp.chSendClientStatus, cp.chLog)
 		if err != nil {
 			apiOutErr(w, err, http.StatusInternalServerError)
 			return

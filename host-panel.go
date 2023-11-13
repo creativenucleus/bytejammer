@@ -57,6 +57,7 @@ func startHostPanel(port int) error {
 	http.HandleFunc("/", hp.webIndex)
 	http.HandleFunc(fmt.Sprintf("/%s/operator", hostSession), hp.webOperator)
 	http.HandleFunc(fmt.Sprintf("/%s/ws-operator", hostSession), hp.wsWebOperator())
+	http.HandleFunc(fmt.Sprintf("/%s/api/recent-sessions.json", hostSession), hp.webApiRecentSessions)
 	http.HandleFunc(fmt.Sprintf("/%s/api/server.json", hostSession), hp.webApiServer)
 	http.HandleFunc(fmt.Sprintf("/%s/api/machine.json", hostSession), hp.webApiMachine)
 	if err := webServer.ListenAndServe(); err != nil {
@@ -76,7 +77,10 @@ func (hp *HostPanel) webIndex(w http.ResponseWriter, r *http.Request) {
 func (hp *HostPanel) webOperator(w http.ResponseWriter, r *http.Request) {
 	env := stick.New(nil)
 
-	err := env.Execute(string(embed.ServerOperatorHtml), w, map[string]stick.Value{"session_key": "session"})
+	err := env.Execute(string(embed.ServerOperatorHtml), w, map[string]stick.Value{
+		"release_title": RELEASE_TITLE,
+		"session_key":   "session",
+	})
 	if err != nil {
 		log.Println("write:", err)
 	}
@@ -116,6 +120,8 @@ func (hp *HostPanel) wsOperatorRead() {
 		}
 
 		switch msg.Type {
+		case "create-slot":
+			hp.handleCreateSlot()
 		case "identify-machines":
 			hp.handleIdentifyMachines()
 		case "connect-machine-client":
@@ -150,6 +156,21 @@ func (hp *HostPanel) wsOperatorWrite() {
 		case logMsg := <-hp.chLog:
 			hp.sendLog(logMsg)
 		}
+	}
+}
+
+func (hp *HostPanel) webApiRecentSessions(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		recentSessions, err := server.GetRecentSessions()
+		if err != nil {
+			apiOutErr(w, err, http.StatusInternalServerError)
+			return
+		}
+		apiOutResponse(w, recentSessions, http.StatusOK)
+
+	default:
+		apiOutErr(w, errors.New("method not allowed"), http.StatusMethodNotAllowed)
 	}
 }
 
@@ -271,6 +292,20 @@ func (hp *HostPanel) handleStopServer() {
 	}
 
 	hp.session.Stop()
+	hp.sendServerStatus(true)
+}
+
+func (hp *HostPanel) handleCreateSlot() {
+	if hp.session == nil {
+		hp.chLog <- "Requested create slot, but no server is running"
+		return
+	}
+
+	_, err := server.CreateMachineSlot()
+	if err != nil {
+		hp.chLog <- err.Error()
+	}
+
 	hp.sendServerStatus(true)
 }
 

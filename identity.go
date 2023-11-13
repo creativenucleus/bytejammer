@@ -14,13 +14,17 @@ import (
 
 type Identity struct {
 	Uuid        uuid.UUID             `json:"uuid"`
-	DisplayName string                `json:"displayName"`
+	DisplayName string                `json:"display-name"`
 	Crypto      *crypto.CryptoPrivate `json:"crypto"`
 }
 
 // For storage?: hex.EncodeString, hex.DecodeString
 
 func makeIdentity(displayName string) error {
+	if displayName == "" {
+		return fmt.Errorf("display name cannot be empty")
+	}
+
 	basepath := filepath.Clean(fmt.Sprintf("%sclient-data/identity", config.WORK_DIR))
 	err := util.EnsurePathExists(basepath, os.ModePerm)
 	if err != nil {

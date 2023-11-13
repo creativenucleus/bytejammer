@@ -18,18 +18,57 @@
             const ajax = new BjmrAjax('{{session_key}}')
 
             let SERVER = null;
+            let SESSIONS = {};
             let CLIENTS = {};
             let MACHINES = {};
 
+            const refreshViewSessions = () => {
+                const elSelect = document.getElementById("resume-session-slug");
+                while (elSelect.firstChild) {
+                    elSelect.removeChild(elSelect.firstChild);
+                }
+
+                for (const [key, session] of Object.entries(SESSIONS)) {
+                    const elOption = document.createElement("option");
+                    elOption.value = session['slug'];
+                    elOption.text = `${session['name']} ${session['started_at']} port(${session['port']})`;
+
+                    elSelect.appendChild(elOption);
+                }
+            }
+            
+            const fetchSessions = async () => {
+                // #TODO: catch errors
+                const res = await ajax.makeReq("GET", "recent-sessions");
+                if (res.ok) {
+                    SESSIONS = res.data;
+                    refreshViewSessions();
+                    refreshVisibility();
+                }
+            }
+
             const refreshVisibility = () => {
                 if (!SERVER) {
-                    document.getElementById("section-create-server").style.display = "block";
+                    document.getElementById("section-launch-server").style.display = "block";
                     document.getElementById("section-server-info").style.display = "none";
                 } else {
-                    document.getElementById("section-create-server").style.display = "none";
+                    document.getElementById("section-launch-server").style.display = "none";
                     document.getElementById("section-server-info").style.display = "block";
                 }
             }
+
+            const onClickStartTIC = (slotId) => {
+                if (!ws.isOpen()) {
+                    return false;
+                }
+                addToLog(`Requested start machine in ${slotId}`);
+                ws.sendMsg("start-machine", {
+                    'start-machine': {
+                        'slot': slotId
+                    }
+                });
+                return false;
+            };
 
             const onClickConnectMachine = (machineUuid, clientUuid) => {
                 if (!ws.isOpen()) {
@@ -135,6 +174,49 @@
                 document.getElementById("clients").innerHTML = html;
 
                 html = '';
+                if(!data.Slots || data.Slots.length == 0) {
+                    html = "<div>No slots created</div>";
+                } else {
+                    html += "<table class=\"table\">";
+                    html += `<thead>`;
+                    html += `<tr>`;
+                    html += `<th>Slot</th>`;
+                    html += `<th>Status</th>`;
+                    html += `<th>Machine</th>`;
+                    html += `<th>Platform</th>`;
+                    html += `<th>Jammer</th>`;
+                    html += `<th>Last Snapshot</th>`;
+                    html += `<th></th>`;
+                    html += `</tr>`;
+                    html += `</thead>`;
+                    html += `<tbody>`;
+                    for (const slot of data.Slots) {
+                        let machine = ""
+                        if(slot.machine) {
+                            machine = `${slot.machine.MachineName}<br>(Process: ${slot.ProcessID})`;
+                        } else {
+                            machine = `<button class="btn btn-primary" onclick="return onClickStartTIC('${slot.Id}')">Start TIC</button>`;
+                        }
+
+                        html += `<tr>`;
+                        html += `<td>${slot.Id}</td>`;
+                        html += `<td>${slot.Status}</td>`;
+                        html += `<td>${machine}</td>`;
+                        html += `<td>${slot.Platform}</td>`;
+                        html += `<td>${slot.JammerDisplayName}</td>`;
+                        html += `<td>${slot.LastSnapshotTime}</td>`;
+                        html += `<td>`
+//                        html += `<button class="btn btn-primary" onclick="return onClickCloseMachine(this);" data-uuid="${machine.Uuid}">Close Machine</button> `;
+//                        html += `<button class="btn btn-primary" onclick="return onClickDisconnectMachine('${machine.Uuid}', '${machine.ClientUuid}')">Disconnect Jammer</button> `;
+                        html += `</td>`;
+                        html += `</tr>`;
+                    }
+                    html += `</tbody>`;
+                    html += "</table>";
+                }
+                document.getElementById("slots").innerHTML = html;
+
+                html = '';
                 if(!data.Machines || data.Machines.length == 0) {
                     html = "<div>No machines running</div>";
                 } else {
@@ -177,6 +259,8 @@
 
             window.onload = () => {
                 refreshVisibility();
+                fetchSessions();
+
                 const conn = ws.open("ws://" + document.location.host + "/{{session_key}}/ws-operator");
                 if(!conn) {                    
                     setWsLocalStatusText('error', "Your browser does not support WebSockets");
@@ -222,12 +306,12 @@
                     }
                 }
 
-                document.getElementById("start-server").addEventListener("submit", (e) => {
+                document.getElementById("start-session").addEventListener("submit", (e) => {
                     e.preventDefault();
                     const data = getDataFromForm(e.target)
                     e.target.reset();
 
-                    addToLog(`Requested Start Server on port: ${data.port}`);
+                    addToLog(`Requested Start Session on port: ${data.port}`);
                     (async() => {
                         const res = await ajax.makeReq("POST", "server", {port: data.port, 'session-name': data['session-name']})
                         if (res.ok) {
@@ -236,6 +320,30 @@
                     })();
                 });
 
+                document.getElementById("resume-session").addEventListener("submit", (e) => {
+                    e.preventDefault();
+                    const data = getDataFromForm(e.target)
+                    e.target.reset();
+                    console.log(data)
+
+                    addToLog(`Requested Resume Session: ${data['session-slug']}`);
+                    (async() => {
+                        const res = await ajax.makeReq("POST", "server-resume", {'session-slug': data['session-slug']})
+                        if (res.ok) {
+                            addToLog("Server Started");
+                        }
+                    })();
+                });
+
+                document.getElementById("btn-create-slot").onclick = () => {
+                    if (!ws.isOpen()) {
+                        return false;
+                    }
+                    addToLog(`Requesting slot create`);
+                    ws.sendMsg("create-slot", {});
+                    return false;
+                };
+                
                 document.getElementById("btn-identify-machines").onclick = () => {
                     if (!ws.isOpen()) {
                         return false;
@@ -273,48 +381,73 @@
     </head>
     <body>
         <div class="container">
-            <h1><img src="/static/media/bytejammer-icon.png" alt="ByteJammer icon"> ByteJammer</h1>
+            <h1><img src="/static/media/bytejammer-icon.png" alt="ByteJammer icon"> ByteJammer / {{release_title}} edition</h1>
 
-            <div class="card mt-4 mb-4" id="section-create-server">
-                <div class="card-header">
-                    <h2>Server</h2>
-                </div>
-                <div class="card-body">
-                    <form id="start-server">
-                        <div class="row g-3 align-items-center">
-                            <div class="col-auto">
-                                <label for="port" class="form-label">Port</label>
+            <div id="section-launch-server">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mt-2 mb-2">
+                            <div class="card-header text-bg-primary">
+                                <h3>Start New Jam Session</h3>
                             </div>
-                            <div class="col-auto">
-                                <input type="number" value="4455" class="form-control" id="port" name="port" aria-describedby="port">
+                            <div class="card-body">
+                                <form id="start-session">
+                                    <div class="row mb-3">
+                                        <label for="port" class="col-sm-3 col-form-label text-end">Port</label>
+                                        <div class="col-sm-9">
+                                            <input type="number" value="4545" class="form-control" id="port" name="port">
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <label for="session-name" class="col-sm-3 col-form-label text-end">Session Name</label>
+                                        <div class="col-sm-9">
+                                            <input type="text" class="form-control" id="session-name" name="session-name">
+                                            <span id="sessionNameHelp" class="form-text">
+                                                This is for your own reference only - a directory will be created on your
+                                                filesystem using the date and this name, but you don't need to disclose it to
+                                                your jammers.
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="offset-sm-3">
+                                            <button type="submit" class="btn btn-primary">Start New Jam Session</button>
+                                        </div>
+                                    </div>
+                                </form>
                             </div>
-                            <div class="col-auto">
-                                <span id="portHelp" class="form-text">
-                                    
-                                </span>
+                        </div>    
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card mt-2 mb-2">
+                            <div class="card-header text-bg-primary">
+                                <h3>Resume Jam Session</h3>
+                            </div>
+                            <div class="card-body">
+                                <form id="resume-session">
+                                    <div class="row mb-3">
+                                        <label for="resume-session-slug" class="col-sm-3 col-form-label text-end">Session name</label>
+                                        <div class="col-sm-9">
+                                            <select class="form-select" aria-label="Default select example" id="resume-session-slug" name="session-slug">
+                                                <option selected>(...loading...)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="offset-sm-3">
+                                            <button type="submit" class="btn btn-primary">Resume Jam Session</button>
+                                        </div>
+                                    </div>
+                                </form>
                             </div>
                         </div>
-                        <div class="row g-3 align-items-center">
-                            <div class="col-auto">
-                                <label for="session-name" class="form-label">Session Name</label>
-                            </div>
-                            <div class="col-auto">
-                                <input class="form-control" id="session-name" name="session-name" aria-describedby="session-name">
-                            </div>
-                            <div class="col-auto">
-                                <span id="sessionNameHelp" class="form-text">
-                                    A directory will be created on your filesystem for this session
-                                </span>
-                            </div>
-                        </div>
-                        <button class="btn btn-primary">Start</button>
-                    </form>
+                    </div>
                 </div>
             </div>
             
             <div id="section-server-info">
                 <div class="card mt-4 mb-4">
-                    <div class="card-header">
+                    <div class="card-header text-bg-primary">
                         <h2>Server</h2>
                     </div>
                     <div class="card-body">
@@ -323,7 +456,7 @@
                 </div>
 
                 <div class="card mt-4 mb-4">
-                    <div class="card-header">
+                    <div class="card-header text-bg-success">
                         <h2>Jammers</h2>
                     </div>
                     <div class="card-body">
@@ -332,7 +465,19 @@
                 </div>
 
                 <div class="card mt-4 mb-4">
-                    <div class="card-header">
+                    <div class="card-header text-bg-success">
+                        <h2>Slots</h2>
+                    </div>
+                    <div class="card-body">
+                        <div id="slots"></div>
+                    </div>
+                    <div class="card-footer">
+                        <button id="btn-create-slot" class="btn btn-primary">Create Slot</button>
+                    </div>
+                </div>
+
+                <div class="card mt-4 mb-4">
+                    <div class="card-header text-bg-success">
                         <h2>Machines</h2>
                     </div>
                     <div class="card-body">
@@ -354,7 +499,7 @@
             </div>
 
             <div class="card mt-4 mb-4">
-                <div class="card-header">
+                <div class="card-header text-bg-secondary">
                     <h2>Log</h2>
                 </div>
                 <div class="card-body">

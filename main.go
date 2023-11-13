@@ -10,17 +10,24 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/creativenucleus/bytejammer/config"
+	"github.com/creativenucleus/bytejammer/server"
 	"github.com/creativenucleus/bytejammer/util"
 )
 
 const (
-	RELEASE_TITLE         = "Appealing Apricot"
+	RELEASE_TITLE         = "Bewitching Blueberry"
 	JUKEBOX_PLAYTIME_SECS = 10
 )
 
 func main() {
 	// Make our working directory
 	err := util.EnsurePathExists(config.WORK_DIR, os.ModePerm)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Make our server session directory
+	err = util.EnsurePathExists(server.GetSessionDataPath(), os.ModePerm)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sort"
 	"time"
 
 	"github.com/creativenucleus/bytejammer/comms"
@@ -23,7 +24,7 @@ type Session struct {
 	name string
 	// The slug we can use to saved this config to disk...
 	slug      string
-	startTime time.Time
+	startedAt time.Time
 
 	// The connections, machines, and the connections between them
 	switchboard *Switchboard
@@ -43,7 +44,7 @@ func CreateSession(port int, name string, chLog chan string) (*Session, error) {
 		port:        port,
 		name:        name,
 		slug:        fmt.Sprintf("%s_%s", util.GetSlugFromTime(now), nameSlug),
-		startTime:   now,
+		startedAt:   now,
 		switchboard: makeSwitchboard(),
 		chLog:       chLog,
 	}
@@ -94,6 +95,55 @@ func (js *Session) writeConfig() error {
 	}
 
 	return nil
+}
+
+func readConfig(slug string) (*SessionConfig, error) {
+	filepath := fmt.Sprintf("%s/%s/config.json", GetSessionDataPath(), slug)
+	data, err := os.ReadFile(filepath)
+	if err != nil {
+		return nil, err
+	}
+
+	var config SessionConfig
+	err = json.Unmarshal(data, &config)
+	if err != nil {
+		return nil, err
+	}
+
+	return &config, nil
+}
+
+type SessionRef struct {
+	Slug      string    `json:"slug"`
+	Name      string    `json:"name"`
+	Port      int       `json:"port"`
+	StartedAt time.Time `json:"started_at"`
+}
+
+func GetRecentSessions() ([]SessionRef, error) {
+	files, err := os.ReadDir(GetSessionDataPath())
+	if err != nil {
+		return nil, err
+	}
+
+	sessions := []SessionRef{}
+	for _, fileInfo := range files {
+		if fileInfo.IsDir() {
+			slug := fileInfo.Name()
+			config, err := readConfig(slug)
+			if err != nil {
+				// #TODO: ignore this one as corrupted rather than raising a blocking error
+				return nil, err
+			}
+			sessions = append(sessions, SessionRef{Slug: slug, Name: config.Name, Port: config.Port, StartedAt: config.StartedAt})
+		}
+	}
+
+	sort.SliceStable(sessions, func(i, j int) bool {
+		return sessions[i].Slug >= sessions[j].Slug
+	})
+
+	return sessions, nil
 }
 
 func (js *Session) start() error {
@@ -169,8 +219,12 @@ func (js *Session) Stop() error {
 	return nil
 }
 
+func GetSessionDataPath() string {
+	return fmt.Sprintf("%sserver-data/sessions", config.WORK_DIR)
+}
+
 func (js *Session) getBasePath() string {
-	return fmt.Sprintf("%sserver-data/%s", config.WORK_DIR, js.slug)
+	return fmt.Sprintf("%s/%s", GetSessionDataPath(), js.slug)
 }
 
 func (js *Session) GetStatus() comms.DataSessionStatus {
@@ -201,6 +255,36 @@ func (js *Session) GetStatus() comms.DataSessionStatus {
 			Status:       status,
 			MachineUuid:  machineUuid,
 			LastPingTime: time.Now().Format(time.RFC3339),
+		})
+	}
+
+	for i, slot := range MACHINE_SLOTS {
+		machineStatus := "(ready)"
+		machineName := ""
+		machineProcessID := 0
+		machinePlatform := ""
+		if slot.machine != nil {
+			machineStatus = "running"
+			machineName = slot.machine.MachineName
+			machineProcessID = slot.machine.Tic.GetProcessID()
+			machinePlatform = slot.machine.Platform
+		}
+		ss.Slots = append(ss.Slots, struct {
+			Id                int
+			Status            string
+			MachineName       string
+			ProcessID         int
+			Platform          string
+			JammerDisplayName string
+			LastSnapshotTime  string
+		}{
+			Id:                i,
+			Status:            machineStatus,
+			MachineName:       machineName,
+			ProcessID:         machineProcessID,
+			Platform:          machinePlatform,
+			JammerDisplayName: "",
+			LastSnapshotTime:  "",
 		})
 	}
 

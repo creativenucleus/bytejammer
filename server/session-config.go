@@ -1,6 +1,10 @@
 package server
 
-import "github.com/google/uuid"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type ConfigMachine struct {
 	Name           string     `json:"name"`
@@ -9,18 +13,20 @@ type ConfigMachine struct {
 }
 
 type SessionConfig struct {
-	Port     int             `json:"port"`
-	Name     string          `json:"name"`
-	Slug     string          `json:"slug"`
-	Machines []ConfigMachine `json:"machines"`
+	Port      int             `json:"port"`
+	Name      string          `json:"name"`
+	StartedAt time.Time       `json:"started_at"`
+	Slug      string          `json:"slug"`
+	Machines  []ConfigMachine `json:"machines"`
 }
 
 // JamSessionConfig should be enough to save to disk and restart a JamSession if it crashes
 func getSessionConfig(s Session) SessionConfig {
 	sc := SessionConfig{
-		Port: s.port,
-		Name: s.name,
-		Slug: s.slug,
+		Port:      s.port,
+		Name:      s.name,
+		Slug:      s.slug,
+		StartedAt: s.startedAt,
 	}
 
 	for _, machine := range s.switchboard.machines {
