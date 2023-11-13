@@ -26,6 +26,11 @@ type DataCloseMachine struct {
 	Uuid string `json:"uuid"`
 }
 
+type DataMachineSetup struct {
+	SlotID     string `json:"slot-id"`
+	Connection string `json:"connection"`
+}
+
 type DataConnectMachineClient struct {
 	MachineUuid string `json:"machine-uuid"`
 	ClientUuid  string `json:"client-uuid"`
@@ -89,6 +94,7 @@ type Msg struct {
 	Log                     DataLog                     `json:"log,omitempty"`
 	ConnectMachineClient    DataConnectMachineClient    `json:"connect-machine-client,omitempty"`
 	DisconnectMachineClient DataDisconnectMachineClient `json:"disconnect-machine-client,omitempty"`
+	DataMachineSetup        DataMachineSetup            `json:"machine-setup,omitempty"`
 	CloseMachine            DataCloseMachine            `json:"close-machine,omitempty"`
 	ChallengeRequest        DataChallengeRequest        `json:"challenge-request,omitempty"`
 	ChallengeResponse       DataChallengeResponse       `json:"challenge-response,omitempty"`

@@ -21,6 +21,7 @@
             let SESSIONS = {};
             let CLIENTS = {};
             let MACHINES = {};
+            let SLOTS = {};
 
             const refreshViewSessions = () => {
                 const elSelect = document.getElementById("resume-session-slug");
@@ -32,6 +33,27 @@
                     const elOption = document.createElement("option");
                     elOption.value = session['slug'];
                     elOption.text = `${session['name']} ${session['started_at']} port(${session['port']})`;
+
+                    elSelect.appendChild(elOption);
+                }
+            }
+
+            const refreshViewSlots = () => {
+                const elSelect = document.getElementById("slot-connection");
+                while (elSelect.firstChild) {
+                    elSelect.removeChild(elSelect.firstChild);
+                }
+                
+                const elOptionCreate = document.createElement("option");
+                elOptionCreate.value = '-';
+                elOptionCreate.text = `(Create New)`;
+                elSelect.appendChild(elOptionCreate);
+
+                const slots = SLOTS || {};
+                for (const [key, slot] of Object.entries(slots)) {
+                    const elOption = document.createElement("option");
+                    elOption.value = key;
+                    elOption.text = `Update ${key}`;
 
                     elSelect.appendChild(elOption);
                 }
@@ -57,6 +79,7 @@
                 }
             }
 
+            /*
             const onClickStartTIC = (slotId) => {
                 if (!ws.isOpen()) {
                     return false;
@@ -69,6 +92,7 @@
                 });
                 return false;
             };
+            */
 
             const onClickConnectMachine = (machineUuid, clientUuid) => {
                 if (!ws.isOpen()) {
@@ -76,10 +100,8 @@
                 }
                 addToLog(`Requested connect machine ${machineUuid} to ${clientUuid}`);
                 ws.sendMsg("connect-machine-client", {
-                    'connect-machine-client': {
-                        'machine-uuid': machineUuid,
-                        'client-uuid': clientUuid,
-                    }
+                    'machine-uuid': machineUuid,
+                    'client-uuid': clientUuid,
                 });
                 return false;
             };
@@ -90,10 +112,8 @@
                 }
                 addToLog(`Requested disconnect machine ${clientUuid} from ${machineUuid}`);
                 ws.sendMsg("disconnect-machine-client", {
-                    'disconnect-machine-client': {
-                        'machine-uuid': machineUuid,
-                        'client-uuid': clientUuid,
-                    }
+                    'machine-uuid': machineUuid,
+                    'client-uuid': clientUuid,
                 });
                 return false;
             };
@@ -114,7 +134,7 @@
                 }
                 const uuid = target.getAttribute('data-uuid')
                 addToLog(`Requested close machine ${uuid}`);
-                ws.sendMsg("close-machine", {'close-machine': {uuid: uuid}});
+                ws.sendMsg("close-machine", {uuid: uuid});
                 return false;
             };
 
@@ -174,7 +194,8 @@
                 document.getElementById("clients").innerHTML = html;
 
                 html = '';
-                if(!data.Slots || data.Slots.length == 0) {
+                SLOTS = data.Slots;
+                if(!SLOTS || SLOTS.length == 0) {
                     html = "<div>No slots created</div>";
                 } else {
                     html += "<table class=\"table\">";
@@ -195,7 +216,7 @@
                         if(slot.machine) {
                             machine = `${slot.machine.MachineName}<br>(Process: ${slot.ProcessID})`;
                         } else {
-                            machine = `<button class="btn btn-primary" onclick="return onClickStartTIC('${slot.Id}')">Start TIC</button>`;
+                            machine = `(none)`;
                         }
 
                         html += `<tr>`;
@@ -215,6 +236,7 @@
                     html += "</table>";
                 }
                 document.getElementById("slots").innerHTML = html;
+                refreshViewSlots();
 
                 html = '';
                 if(!data.Machines || data.Machines.length == 0) {
@@ -335,14 +357,19 @@
                     })();
                 });
 
-                document.getElementById("btn-create-slot").onclick = () => {
+                document.getElementById("setup-machine").addEventListener("submit", (e) => {
+                    e.preventDefault();
                     if (!ws.isOpen()) {
                         return false;
                     }
-                    addToLog(`Requesting slot create`);
-                    ws.sendMsg("create-slot", {});
+
+                    const data = getDataFromForm(e.target)
+                    e.target.reset();
+
+                    addToLog(`Requested Setup Machine: ${data['slot-id']} ${data['connection']}`);
+                    ws.sendMsg("machine-setup", {'slot-id': data['slot-id'], 'connection': data['connection']});
                     return false;
-                };
+                });
                 
                 document.getElementById("btn-identify-machines").onclick = () => {
                     if (!ws.isOpen()) {
@@ -470,9 +497,31 @@
                     </div>
                     <div class="card-body">
                         <div id="slots"></div>
+                        <p class="form-text">
+                            NB If you remove a machine, it will close, but the jammer will still be connected to your server in case
+                            you'd like to reassign them.
+                        </p>
                     </div>
                     <div class="card-footer">
-                        <button id="btn-create-slot" class="btn btn-primary">Create Slot</button>
+                        <form class="row gy-2 gx-3 align-items-center" id="setup-machine">
+                            <div class="col-auto">
+                                <label class="visually-hidden" for="slot-id">Slot ID</label>
+                                <select class="form-select" id="slot-connection" name="slot-id">
+                                </select>
+                            </div>
+                            <div class="col-auto">
+                                <label class="visually-hidden" for="slot-connection">Connection</label>
+                                <select class="form-select" id="slot-connection" name="connection">
+                                    <option value="-" selected>(No Machine)</option>
+                                    <option value="tic">TIC (no jammer)</option>
+                                    <option value="tic:lcdz">TIC (LCDZ playlist)</option>
+                                    <option value="tic:@jtruk">Jammer: @jtruk</option>
+                                </select>
+                            </div>
+                            <div class="col-auto">
+                                <button type="submit" class="btn btn-primary">Create Slot</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
 
@@ -494,6 +543,7 @@
                             </ul>
                         </div>
                         <button id="btn-identify-machines" class="btn btn-primary">Identify Machines (10s)</button>
+
                     </div>
                 </div>
             </div>

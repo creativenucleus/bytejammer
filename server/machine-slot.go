@@ -83,6 +83,17 @@ func DestroyMachineSlot(ms *MachineSlot) {
 	MACHINE_SLOTS = newSlots
 }
 
+func GetMachineSlot(slotID int) (*MachineSlot, error) {
+	MACHINE_SLOTS_MUTEX.Lock()
+	defer MACHINE_SLOTS_MUTEX.Unlock()
+
+	if slotID >= len(MACHINE_SLOTS) {
+		return nil, fmt.Errorf("requested machine slot [%d] but we only have [%d]", slotID, len(MACHINE_SLOTS))
+	}
+
+	return MACHINE_SLOTS[slotID], nil
+}
+
 func GetFreeMachineSlot() *MachineSlot {
 	for _, slot := range MACHINE_SLOTS {
 		if slot.machine == nil {
