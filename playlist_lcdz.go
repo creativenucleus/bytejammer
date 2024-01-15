@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"regexp"
 
@@ -10,21 +9,28 @@ import (
 )
 
 func NewPlaylistLCDZ() (*Playlist, error) {
-	urlSource := "https://livecode.demozoo.org/type/Byte%2520Jam.html"
+	urlSource := "https://livecode.demozoo.org/type/Byte_Jam.html"
 	resp, err := http.Get(urlSource)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Fatal(err)
+		return nil, fmt.Errorf("LCDZ page responded with [%s] rather than 200", resp.Status)
 	}
 
 	doc, err := html.Parse(resp.Body)
+	if err != nil {
+		return nil, err
+	}
 
 	p := NewPlaylist()
 	links := findAllLuaLinks(doc)
+	if len(links) == 0 {
+		return nil, fmt.Errorf("LCDZ page responded, but no lua files found")
+	}
+
 	for _, link := range links {
 		p.items = append(p.items, PlaylistItem{location: link})
 	}
