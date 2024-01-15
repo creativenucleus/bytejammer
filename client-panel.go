@@ -14,6 +14,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/tyler-sommer/stick"
 
+	"github.com/creativenucleus/bytejammer/comms"
 	"github.com/creativenucleus/bytejammer/embed"
 )
 
@@ -27,9 +28,10 @@ const (
 
 type ClientPanel struct {
 	// #TODO: lock down to receiver only
-	chSendServerStatus chan ClientServerStatus
+	chSendClientStatus chan comms.DataClientStatus
 	wsClient           *websocket.Conn
 	wsMutex            sync.Mutex
+	chLog              chan string
 }
 
 func startClientPanel(port int) error {
@@ -50,13 +52,23 @@ func startClientPanel(port int) error {
 	fmt.Printf("In a web browser, go to http://localhost:%d/%s\n", port, session)
 
 	cp := ClientPanel{
-		chSendServerStatus: make(chan ClientServerStatus),
+		chSendClientStatus: make(chan comms.DataClientStatus),
+		chLog:              make(chan string),
 	}
+
+	go func() {
+		for {
+			logMsg := <-cp.chLog
+			cp.sendLog(logMsg)
+		}
+	}()
+
 	http.HandleFunc(fmt.Sprintf("/%s", session), cp.webClientIndex)
 	http.HandleFunc(fmt.Sprintf("/%s/api/identity.json", session), cp.webClientApiIdentityJSON)
 	http.HandleFunc(fmt.Sprintf("/%s/api/join-server.json", session), cp.webClientApiJoinServerJSON)
 	http.HandleFunc(fmt.Sprintf("/%s/ws-client", session), cp.wsWebClient())
-	if err := webServer.ListenAndServe(); err != nil {
+	err = webServer.ListenAndServe()
+	if err != nil {
 		return err
 	}
 
@@ -105,14 +117,16 @@ func (cp *ClientPanel) webClientApiIdentityJSON(w http.ResponseWriter, r *http.R
 		apiOutResponse(w, nil, http.StatusCreated)
 
 	default:
-		apiOutErr(w, errors.New("Method not allowed"), http.StatusMethodNotAllowed)
+		apiOutErr(w, fmt.Errorf("method not allowed"), http.StatusMethodNotAllowed)
 	}
 }
 
 func (cp *ClientPanel) webClientApiJoinServerJSON(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "POST":
-		cp.chSendServerStatus <- ClientServerStatus{isConnected: false}
+		cp.chLog <- "Request: Join Server"
+
+		cp.chSendClientStatus <- comms.DataClientStatus{IsConnected: false}
 
 		// #TODO: Cleaner way to do this?
 		type reqType struct {
@@ -141,7 +155,7 @@ func (cp *ClientPanel) webClientApiJoinServerJSON(w http.ResponseWriter, r *http
 			return
 		}
 
-		err = startClientServerConn(req.Host, port, identity, cp.chSendServerStatus)
+		err = startClientServerConn(req.Host, port, identity, cp.chSendClientStatus)
 		if err != nil {
 			apiOutErr(w, err, http.StatusInternalServerError)
 			return
@@ -149,32 +163,37 @@ func (cp *ClientPanel) webClientApiJoinServerJSON(w http.ResponseWriter, r *http
 		apiOutResponse(w, nil, http.StatusCreated)
 
 	default:
-		apiOutErr(w, errors.New("Method not allowed"), http.StatusMethodNotAllowed)
+		apiOutErr(w, errors.New("method not allowed"), http.StatusMethodNotAllowed)
 	}
 }
 
 func (cp *ClientPanel) wsWebClient() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var err error
-		cp.wsClient, err = wsUpgrader.Upgrade(w, r, nil)
+
+		comms.WsUpgrade(w, r, func(conn *websocket.Conn) error {
+			cp.wsClient = conn
+			defer func() { cp.wsClient = nil }()
+
+			go cp.wsRead()
+			go cp.wsWrite()
+
+			// #TODO: handle exit
+			for {
+				// Removes 100% CPU warning - but this should really be restructured
+				time.Sleep(10 * time.Second)
+			}
+		})
 		if err != nil {
 			log.Print("upgrade:", err)
 			return
-		}
-		defer cp.wsClient.Close()
-
-		go cp.wsRead()
-		go cp.wsWrite()
-
-		// #TODO: handle exit
-		for {
 		}
 	}
 }
 
 func (cp *ClientPanel) wsRead() {
 	for {
-		var msg Msg
+		var msg comms.Msg
 		err := cp.wsClient.ReadJSON(&msg)
 		if err != nil {
 			log.Println("read:", err)
@@ -196,20 +215,22 @@ func (cp *ClientPanel) wsWrite() {
 		}()
 	*/
 	for {
-		select {
-		//		case <-done:
-		//			return
-		//		case <-statusTicker.C:
-		//			fmt.Println("TICKER!")
-
-		case status := <-cp.chSendServerStatus:
-			msg := Msg{Type: "server-status", ServerStatus: status}
-			err := cp.sendData(&msg)
-			if err != nil {
-				// #TODO: relax
-				log.Fatal(err)
-			}
+		status := <-cp.chSendClientStatus
+		msg := comms.Msg{Type: "client-status", ClientStatus: status}
+		err := cp.sendData(&msg)
+		if err != nil {
+			// #TODO: relax
+			log.Fatal(err)
 		}
+	}
+}
+
+func (cp *ClientPanel) sendLog(message string) {
+	msg := comms.Msg{Type: "log", Log: comms.DataLog{Msg: message}}
+
+	err := cp.sendData(&msg)
+	if err != nil {
+		log.Println("read:", err)
 	}
 }
 

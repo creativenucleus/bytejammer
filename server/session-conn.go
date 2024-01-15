@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"encoding/hex"
@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/creativenucleus/bytejammer/comms"
 	"github.com/creativenucleus/bytejammer/crypto"
-	"github.com/creativenucleus/bytejammer/embed"
 	"github.com/creativenucleus/bytejammer/machines"
 	"github.com/creativenucleus/bytejammer/util"
 	"github.com/google/uuid"
@@ -17,18 +17,18 @@ import (
 
 // JamSessionConn is a connection to the JamServer.
 // It may not not yet be validated, or have an identity.
-type JamSessionConn struct {
+type SessionConn struct {
 	conn           *websocket.Conn
 	connUuid       uuid.UUID
 	wsMutex        sync.Mutex
-	identity       *JamSessionConnIdentity
+	identity       *SessionConnIdentity
 	lastTicState   *machines.TicState
 	serverBasePath string
 	publicKey      []byte // This should be a public key type, and we should manage the challenge status
 	signalKick     chan bool
 }
 
-type JamSessionConnIdentity struct {
+type SessionConnIdentity struct {
 	uuid        uuid.UUID
 	displayName string
 	publicKey   []byte
@@ -36,8 +36,8 @@ type JamSessionConnIdentity struct {
 	challenge   []byte
 }
 
-func NewJamSessionConnection(conn *websocket.Conn) *JamSessionConn {
-	client := JamSessionConn{
+func NewJamSessionConnection(conn *websocket.Conn) *SessionConn {
+	client := SessionConn{
 		conn:       conn,
 		connUuid:   uuid.New(),
 		signalKick: make(chan bool),
@@ -46,7 +46,7 @@ func NewJamSessionConnection(conn *websocket.Conn) *JamSessionConn {
 }
 
 // #TODO: make better
-func (jc *JamSessionConn) getIdentityShortUuid() string {
+func (jc *SessionConn) getIdentityShortUuid() string {
 	if jc.identity == nil {
 		return "(unknown)"
 	}
@@ -54,9 +54,9 @@ func (jc *JamSessionConn) getIdentityShortUuid() string {
 	return jc.identity.uuid.String()[0:8]
 }
 
-func (jc *JamSessionConn) runServerWsConnRead(js *JamSession) {
+func (jc *SessionConn) runServerWsConnRead(js *Session) {
 	for {
-		var msg Msg
+		var msg comms.Msg
 		err := jc.conn.ReadJSON(&msg)
 		if err != nil {
 			js.chLog <- fmt.Sprintln("read:", err)
@@ -72,7 +72,7 @@ func (jc *JamSessionConn) runServerWsConnRead(js *JamSession) {
 			}
 
 			// #TODO: NB This identity has not yet been challenged
-			jc.identity = &JamSessionConnIdentity{
+			jc.identity = &SessionConnIdentity{
 				uuid:        identityUuid,
 				displayName: msg.Identity.DisplayName,
 				publicKey:   msg.Identity.PublicKey,
@@ -85,15 +85,17 @@ func (jc *JamSessionConn) runServerWsConnRead(js *JamSession) {
 
 			// #TODO: Refactor this placeholder!
 			// Kick an existing connection off if it has the same identity
-			for _, c := range js.manager.conns {
+			for _, c := range js.switchboard.conns {
 				if c != jc && c.identity != nil && c.identity.uuid.String() == jc.identity.uuid.String() {
 					c.signalKick <- true
-					js.manager.unregisterConn(c)
+					js.switchboard.unregisterConn(c)
 				}
 			}
 
 			// Send the challenge
-			msg := Msg{Type: "challenge-request", ChallengeRequest: DataChallengeRequest{Challenge: fmt.Sprintf("%x", jc.identity.challenge)}}
+			msg := comms.Msg{Type: "challenge-request", ChallengeRequest: comms.DataChallengeRequest{
+				Challenge: fmt.Sprintf("%x", jc.identity.challenge),
+			}}
 			err = jc.sendData(msg)
 			if err != nil {
 				js.chLog <- fmt.Sprintln("write:", err)
@@ -130,7 +132,7 @@ func (jc *JamSessionConn) runServerWsConnRead(js *JamSession) {
 			js.chLog <- fmt.Sprintln("IS VALID!")
 
 		case "tic-state":
-			ts := msg.TicState
+			ts := msg.TicState.State
 
 			if jc.lastTicState != nil && ts.IsEqual(*jc.lastTicState) {
 				// We already sent this state
@@ -144,7 +146,7 @@ func (jc *JamSessionConn) runServerWsConnRead(js *JamSession) {
 				os.WriteFile(path, []byte(ts.GetCode()), 0644)
 			}
 
-			machine := js.manager.getMachineForConn(jc)
+			machine := js.switchboard.getMachineForConn(jc)
 			if machine != nil && machine.Tic != nil {
 				// Output to Tic
 				// Don't shim for now...
@@ -154,7 +156,7 @@ func (jc *JamSessionConn) runServerWsConnRead(js *JamSession) {
 					}
 				*/
 
-				err = machine.Tic.WriteImportCode(ts)
+				err = machine.Tic.WriteImportCode(ts, true)
 				if err != nil {
 					js.chLog <- fmt.Sprintln("read:", err)
 					break
@@ -169,14 +171,15 @@ func (jc *JamSessionConn) runServerWsConnRead(js *JamSession) {
 	}
 }
 
-func (jc *JamSessionConn) runServerWsConnWrite(js *JamSession) {
+func (jc *SessionConn) runServerWsConnWrite(js *Session) {
 	for {
 		select {}
 	}
 }
 
-// TODO: Handle error
-func (js *JamSessionConn) sendMachineNameCode(machineName string) error {
+// #TODO: Adapt this to send code to remote machines
+/*
+func (js *SessionConn) sendMachineNameCode(machineName string) error {
 	ts := machines.MakeTicStateRunning(embed.LuaClient)
 	code := machines.CodeReplace(ts.GetCode(), map[string]string{
 		"CLIENT_ID":    machineName,
@@ -184,12 +187,15 @@ func (js *JamSessionConn) sendMachineNameCode(machineName string) error {
 	})
 	ts.SetCode(code)
 
-	msg := Msg{Type: "tic-state", TicState: ts}
+	msg := comms.Msg{Type: "tic-state", TicState: comms.DataTicState{
+		State: ts,
+	}}
 	err := js.sendData(msg)
 	return err
 }
+*/
 
-func (jc *JamSessionConn) sendData(data interface{}) error {
+func (jc *SessionConn) sendData(data interface{}) error {
 	jc.wsMutex.Lock()
 	defer jc.wsMutex.Unlock()
 	return jc.conn.WriteJSON(data)

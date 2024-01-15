@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/creativenucleus/bytejammer/comms"
 	"github.com/gorilla/websocket"
 )
 
@@ -43,19 +44,23 @@ func NusanLauncherConnect(port int) (*NusanLauncher, error) {
 func wsNusan(nl NusanLauncher) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var err error
-		nl.wsConn, err = wsUpgrader.Upgrade(w, r, nil)
+
+		comms.WsUpgrade(w, r, func(conn *websocket.Conn) error {
+			nl.wsConn = conn
+			defer func() { nl.wsConn = nil }()
+
+			go nl.nusanWsOperatorRead()
+			go nl.nusanWsOperatorWrite()
+
+			// #TODO: handle exit
+			for {
+				// Removes 100% CPU warning - but this should really be restructured
+				time.Sleep(10 * time.Second)
+			}
+		})
 		if err != nil {
 			log.Print("ERR upgrade:", err)
 			return
-		}
-		// #TODO: Not great!
-		defer nl.wsConn.Close()
-
-		go nl.nusanWsOperatorRead()
-		go nl.nusanWsOperatorWrite()
-
-		// #TODO: handle exit
-		for {
 		}
 	}
 }
@@ -63,6 +68,8 @@ func wsNusan(nl NusanLauncher) func(http.ResponseWriter, *http.Request) {
 // #TODO: Is this used?
 func (nl *NusanLauncher) nusanWsOperatorRead() {
 	for {
+		// Removes 100% CPU warning - but this should really be restructured
+		time.Sleep(10 * time.Second)
 		/*
 			var msg interface{}
 			err := nl.conn.ReadJSON(&msg)
@@ -85,16 +92,14 @@ type NusanLauncherMsg struct {
 
 func (nl *NusanLauncher) nusanWsOperatorWrite() {
 	for {
-		select {
-		case msg := <-(*nl.ch):
-			fmt.Printf("-> NUSAN TOSEND: %v\n", msg)
-			nlMsg := NusanLauncherMsg{}
-			nlMsg.Data.RoomName = "bytejammer"
-			nlMsg.Data.NickName = msg
-			err := nl.sendData(&nlMsg)
-			if err != nil {
-				log.Fatal(err)
-			}
+		msg := <-(*nl.ch)
+		fmt.Printf("-> NUSAN TOSEND: %v\n", msg)
+		nlMsg := NusanLauncherMsg{}
+		nlMsg.Data.RoomName = "bytejammer"
+		nlMsg.Data.NickName = msg
+		err := nl.sendData(&nlMsg)
+		if err != nil {
+			log.Fatal(err)
 		}
 	}
 }

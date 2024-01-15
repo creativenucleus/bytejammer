@@ -46,6 +46,7 @@ function TIC()
 		"LCDZ: Totetmatt, PSEnough",
 		"Additional help: Mantratronic, Violet Procyon",
 		"NuSan, and the Field-FX community",
+		"Additional dev: zeno4ever",
     }
  
     for t=1,#texts do

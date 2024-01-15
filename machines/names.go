@@ -1,4 +1,4 @@
-package server
+package machines
 
 import (
 	"math/rand"
@@ -16,7 +16,6 @@ func GetFunName(index int) string {
 		"Citrus Lump",
 		"Dusk Pustules",
 		"Heroine's Tear",
-		"Pocked Airhead",
 		"Crimson Banquet",
 		"Delectable Bouquet",
 		"Lesser Mock Bottom",

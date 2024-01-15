@@ -81,11 +81,11 @@ func getIdentity(uuid string) (*Identity, error) {
 		}
 
 		if len(filematches) == 0 {
-			return nil, fmt.Errorf("No identity file found - ensure you've run this program with make-identity first")
+			return nil, fmt.Errorf("no identity file found - ensure you've run this program with make-identity first")
 		}
 
 		if len(filematches) > 1 {
-			return nil, fmt.Errorf("Multiple identity files found - please specify")
+			return nil, fmt.Errorf("multiple identity files found - please specify")
 		}
 
 		identityFilePath = filematches[0]

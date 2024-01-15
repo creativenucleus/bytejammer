@@ -17,7 +17,7 @@
             const ws = new BjmrWebSocket('{{session_key}}')
             const ajax = new BjmrAjax('{{session_key}}')
 
-            let IDENTITIES = {};
+            let IDENTITIES = null;
 
             const refreshViewIdentities = () => {
                 const elSelect = document.getElementById("identity-id");
@@ -40,10 +40,27 @@
                 if (res.ok) {
                     IDENTITIES = res.data;
                     refreshViewIdentities();
+                    refreshVisibility();
+                }
+            }
+
+            const refreshVisibility = () => {
+                if (IDENTITIES===null) {
+                    // Not yet initialised
+                    document.getElementById("section-create-identity").style.display = "none";
+                    document.getElementById("section-join-server").style.display = "none";
+                } else if (Object.keys(IDENTITIES).length == 0) {
+                    // Currently, only one identity is supported for clients
+                    document.getElementById("section-create-identity").style.display = "block";
+                    document.getElementById("section-join-server").style.display = "none";
+                } else {
+                    document.getElementById("section-create-identity").style.display = "none";
+                    document.getElementById("section-join-server").style.display = "block";
                 }
             }
 
             window.onload = () => {
+                refreshVisibility();
                 fetchIdentites();
 
                 document.getElementById("create-identity").addEventListener("submit", (e) => {
@@ -108,12 +125,12 @@
                         const msg = JSON.parse(evt.data);
                         console.log(msg)
                         switch(msg.type) {
-                            case "server-status":
+                            case "client-status":
 //                                handleMsgServerStatus(msg.data)
                                 break;
 
                             case "log":
-                                handleMsgLog(msg.data);
+                                handleMsgLog(msg.log);
                                 break;
 
                             default:
@@ -128,7 +145,7 @@
         <div class="container">
             <h1><img src="/static/media/bytejammer-icon.png" alt="ByteJammer icon"> ByteJammer</h1>
 
-            <div class="card mt-4 mb-4">
+            <div class="card mt-4 mb-4" id="section-create-identity">
                 <div class="card-header">
                     <h2>Create an Identity</h2>
                 </div>
@@ -152,7 +169,7 @@
                 </div>
             </div>
 
-            <div class="card mt-4 mb-4">
+            <div class="card mt-4 mb-4"  id="section-join-server">
                 <div class="card-header">
                     <h2>Join a Server</h2>
                 </div>
@@ -211,14 +228,14 @@
                         <button type="submit" class="btn btn-primary">Join</button>
                     </form>
                 </div>
+            </div>
 
-                <div class="card mt-4 mb-4">
-                    <div class="card-header">
-                        <h2>Log</h2>
-                    </div>
-                    <div class="card-body">
-                        <div id="log"></div>
-                    </div>
+            <div class="card mt-4 mb-4">
+                <div class="card-header">
+                    <h2>Log</h2>
+                </div>
+                <div class="card-body">
+                    <div id="log"></div>
                 </div>
             </div>
 

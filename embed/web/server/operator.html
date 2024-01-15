@@ -17,8 +17,19 @@
             const ws = new BjmrWebSocket('{{session_key}}')
             const ajax = new BjmrAjax('{{session_key}}')
 
+            let SERVER = null;
             let CLIENTS = {};
             let MACHINES = {};
+
+            const refreshVisibility = () => {
+                if (!SERVER) {
+                    document.getElementById("section-create-server").style.display = "block";
+                    document.getElementById("section-server-info").style.display = "none";
+                } else {
+                    document.getElementById("section-create-server").style.display = "none";
+                    document.getElementById("section-server-info").style.display = "block";
+                }
+            }
 
             const onClickConnectMachine = (machineUuid, clientUuid) => {
                 if (!ws.isOpen()) {
@@ -69,7 +80,13 @@
             };
 
             const handleMsgServerStatus = (data) => {
-                let html = '';
+                SERVER = true;  // (echo settings)
+                refreshVisibility();
+
+                let html = `<p>Port: ${data.Port}</p>`;
+                document.getElementById("server-details").innerHTML = html;
+
+                html = '';
                 if(!data.Clients || data.Clients.length == 0) {
                     html = "<div>No clients connected</div>";
                 } else {
@@ -159,6 +176,7 @@
             }
 
             window.onload = () => {
+                refreshVisibility();
                 const conn = ws.open("ws://" + document.location.host + "/{{session_key}}/ws-operator");
                 if(!conn) {                    
                     setWsLocalStatusText('error', "Your browser does not support WebSockets");
@@ -189,8 +207,9 @@
                     conn.onmessage = (evt) => {
                         const msg = JSON.parse(evt.data);
                         switch(msg.type) {
-                            case "server-status":
-                                handleMsgServerStatus(msg.data);
+                            case "session-status":
+                                console.log(msg)
+                                handleMsgServerStatus(msg['session-status']);
                                 break;
 
                             case "log":
@@ -256,7 +275,7 @@
         <div class="container">
             <h1><img src="/static/media/bytejammer-icon.png" alt="ByteJammer icon"> ByteJammer</h1>
 
-            <div class="card mt-4 mb-4">
+            <div class="card mt-4 mb-4" id="section-create-server">
                 <div class="card-header">
                     <h2>Server</h2>
                 </div>
@@ -293,33 +312,44 @@
                 </div>
             </div>
             
-            <div class="card mt-4 mb-4">
-                <div class="card-header">
-                    <h2>Jammers</h2>
-                </div>
-                <div class="card-body">
-                    <div id="clients"></div>
-                </div>
-            </div>
-
-            <div class="card mt-4 mb-4">
-                <div class="card-header">
-                    <h2>Machines</h2>
-                </div>
-                <div class="card-body">
-                    <div id="machines"></div>
-                </div>
-                <div class="card-footer">
-                    <div class="btn-group">
-                        <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Start Machine
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" id="start-tic-unassigned">TIC (unassigned)</a></li>
-                            <li><a class="dropdown-item" id="start-tic-playlist">TIC (playlist: LCDZ)</a></li>
-                        </ul>
+            <div id="section-server-info">
+                <div class="card mt-4 mb-4">
+                    <div class="card-header">
+                        <h2>Server</h2>
                     </div>
-                    <button id="btn-identify-machines" class="btn btn-primary">Identify Machines (30s)</button>
+                    <div class="card-body">
+                        <div id="server-details"></div>
+                    </div>
+                </div>
+
+                <div class="card mt-4 mb-4">
+                    <div class="card-header">
+                        <h2>Jammers</h2>
+                    </div>
+                    <div class="card-body">
+                        <div id="clients"></div>
+                    </div>
+                </div>
+
+                <div class="card mt-4 mb-4">
+                    <div class="card-header">
+                        <h2>Machines</h2>
+                    </div>
+                    <div class="card-body">
+                        <div id="machines"></div>
+                    </div>
+                    <div class="card-footer">
+                        <div class="btn-group">
+                            <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Start Machine
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" id="start-tic-unassigned">TIC (unassigned)</a></li>
+                                <li><a class="dropdown-item" id="start-tic-playlist">TIC (playlist: LCDZ)</a></li>
+                            </ul>
+                        </div>
+                        <button id="btn-identify-machines" class="btn btn-primary">Identify Machines (10s)</button>
+                    </div>
                 </div>
             </div>
 
