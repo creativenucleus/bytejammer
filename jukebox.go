@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	rotatePeriod = 7 * time.Second
+	rotatePeriod = 15 * time.Second
 )
 
 type Jukebox struct {
