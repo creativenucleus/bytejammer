@@ -43,7 +43,13 @@ func newTic(slug string, hasImportFile bool, hasExportFile bool, isServer bool /
 		"--skip",
 	}
 
-	fmt.Println(slug)
+	fftDevice := os.Getenv("FFTDEVICE")
+	if fftDevice != "" {
+		fmt.Printf("****** --fftdevice: %s\n", fftDevice)
+		args = append(args, fmt.Sprintf("--fftdevice=%s", fftDevice))
+	} else {
+		fmt.Printf("****** no value for --fftdevice\n")
+	}
 
 	exchangefileBasePath := fmt.Sprintf("%s_temp", config.WORK_DIR)
 	err := util.EnsurePathExists(exchangefileBasePath, os.ModePerm)
