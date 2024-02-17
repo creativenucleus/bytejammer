@@ -37,6 +37,8 @@ Make sure you place it in a folder of its own. It will create a subfolder to hol
 
 (Swap `bytejammer.exe` for `bytejammer` on Linux/Mac. You may need to make the file executable with some chmod magic)
 
+Quick note: FFTDEVICE will be picked up from your environment and sent through as a parameter to TIC. I'll make this documentation better when I'm not hack-patching! =)
+
 ### Jukebox Mode
 
 Default (no arguments) mode will launch into jukebox mode, playing random Bytejams from LCDZ.  
