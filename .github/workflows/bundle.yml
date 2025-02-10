@@ -35,7 +35,7 @@ jobs:
       - name: Build
         run: GOOS=${{matrix.os}} GOARCH=amd64 go build -o ./${{matrix.exename}}
       - name: Upload
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: bytejammer-${{matrix.os}}
           path: |
