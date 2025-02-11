@@ -129,6 +129,16 @@ func main() {
 					return nil
 				},
 			}, {
+				Name:  "demozoo-audit",
+				Usage: "Run an audit of demozoo code - experimental",
+				Action: func(cCtx *cli.Context) error {
+					err = doDemozooAudit()
+					if err != nil {
+						log.Fatal(err)
+					}
+					return nil
+				},
+			}, {
 				Name:  "client-jukebox",
 				Usage: "Run client-jukebox",
 				Flags: []cli.Flag{
